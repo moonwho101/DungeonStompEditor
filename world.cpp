@@ -244,16 +244,19 @@ LoadRRTextures(hwnd, "textures.dat");
 			for(i=0;i<4;i++)
 			{
 
-				if(mbshop) {
+				//if(mbshop) {
 
 
 
-				scaleit=0.15f;
-				}
-				else {
-				scaleit=1.0f;
+				//scaleit=0.15f;
+				//}
+				//else {
+				//scaleit=1.0f;
 
-				}
+				//}
+
+				scaleit = 1.0f;
+
 				fscanf( fp, "%s", &p );
 				wptr->obdata[object_count].v[vert_count].x = (float)atof(p)*scaleit;
 		
@@ -276,6 +279,8 @@ LoadRRTextures(hwnd, "textures.dat");
 		
 		}
 		
+
+		scaleit = 1.0f;
 
 		
 		if(strcmp(s,"QUADTEX")==0)
