@@ -73,7 +73,7 @@ int LoadObjectData(HWND hwnd,char *filename,world_ptr wptr)
 	char  p[100];
 	char junk[100];
 
-	float scaleit=0.15f;
+	float scaleit=1.00f;
 
 	int y_count=30;
 	int done=0;
