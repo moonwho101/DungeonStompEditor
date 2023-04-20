@@ -154,7 +154,7 @@ LoadRRTextures(hwnd, "textures.dat");
 							object_count=atoi(p);
 		}
 
-		if(strcmp(s,"TEXTURE")==0)
+		if (strcmp(s, "TEXTURE") == 0)
 		{
 			fscanf( fp, "%s", &p );
 /*
@@ -235,8 +235,13 @@ LoadRRTextures(hwnd, "textures.dat");
 
 		if(strcmp(s,"TYPE")==0)
 		{
-			fscanf( fp, "%s", &p );
+			fscanf(fp, "%s", &p);
 			//world.oblist[object_count].type=object_count;
+		}
+
+		if (strcmp(s, "SHADOW") == 0)
+		{
+			fscanf(fp, "%s", &p);
 		}
 
 		if(strcmp(s,"QUAD")==0)

@@ -46,7 +46,7 @@
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>..\bin\</OutDir>
+    <OutDir>..\DungeonStompDirectX12\bin\</OutDir>
     <IntDir>.\Debug\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetName>DSEdit</TargetName>
@@ -105,7 +105,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ddraw.lib;dsound.lib;winmm.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>..\bin\DSEdit.exe</OutputFile>
+      <OutputFile>..\DungeonStompDirectX12\bin\DSEdit.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>..\bin\DSEdit.pdb</ProgramDatabaseFile>
