@@ -5,57 +5,45 @@
  *
  */
 
-#include	<windows.h>
-//#include	"lclib.h"
+#include <windows.h>
+// #include	"lclib.h"
 
+char *LSTRCHR(const char *lpString, int bChar) {
+	if (lpString != NULL) {
+		while (*lpString != 0) {
+			if (*lpString == bChar) {
+				return (char *)lpString;
+			}
 
-char* LSTRCHR( const char* lpString, int bChar )
-{
-    if( lpString != NULL )
-    {
-	while( *lpString != 0 )
-	{
-	    if( *lpString == bChar )
-	    {
-		return (char*)lpString;
-	    }
-
-	    lpString++;
+			lpString++;
+		}
 	}
-    }
-    return NULL;
+	return NULL;
 
 } /* LSTRCHR */
 
-char* LSTRRCHR( const char* lpString, int bChar )
-{
-    if( lpString != NULL )
-    {
-	const char*	lpBegin;
+char *LSTRRCHR(const char *lpString, int bChar) {
+	if (lpString != NULL) {
+		const char *lpBegin;
 
-	lpBegin = lpString;
+		lpBegin = lpString;
 
-	while( *lpString != 0 )
-	{
-	    lpString++;
+		while (*lpString != 0) {
+			lpString++;
+		}
+
+		while (1) {
+			if (*lpString == bChar) {
+				return (char *)lpString;
+			}
+
+			if (lpString == lpBegin) {
+				break;
+			}
+
+			lpString--;
+		}
 	}
 
-        while( 1 )
-	{
-	    if( *lpString == bChar )
-	    {
-		return (char*)lpString;
-	    }
-	    
-	    if( lpString == lpBegin )
-	    {
-	 	break;
-	    }
-
-	    lpString--;
-	}
-    }
-
-    return NULL;
+	return NULL;
 } /* LSTRRCHR */
-

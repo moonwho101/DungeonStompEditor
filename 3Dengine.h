@@ -7,15 +7,15 @@
 #include <windowsx.h>
 #include "world.h"
 
-#define CLEAR			0
-#define ROAD_SURFACE	1
-#define LEFT_CURB		2
-#define RIGHT_CURB		4
-#define	LEFT_PAVE		8
-#define RIGHT_PAVE		16
-#define	ROAD_STRIPES	32
-#define	LAMP_POSTS		64
-#define	ALL				127
+#define CLEAR 0
+#define ROAD_SURFACE 1
+#define LEFT_CURB 2
+#define RIGHT_CURB 4
+#define LEFT_PAVE 8
+#define RIGHT_PAVE 16
+#define ROAD_STRIPES 32
+#define LAMP_POSTS 64
+#define ALL 127
 
 static int view_angle;
 static float car_speed;
@@ -25,12 +25,11 @@ typedef float point_matrix[4];
 
 static point_matrix p;
 
-typedef struct Camera_typ
-{
+typedef struct Camera_typ {
 	float direction_x;
 	float direction_y;
 	float direction_z;
-	
+
 	float view_point_x;
 	float view_point_y;
 	float view_point_z;
@@ -40,13 +39,11 @@ typedef struct Camera_typ
 	int ramp_size;
 
 	point_matrix p;
-	trans_matrix mx,my,mz,mw;
+	trans_matrix mx, my, mz, mw;
 
-} CAMERA,*Camera_ptr; 
+} CAMERA, *Camera_ptr;
 
-
-typedef struct Results_typ
-{
+typedef struct Results_typ {
 	float px[4][1000];
 	float py[4][1000];
 	float pz[4][1000];
@@ -72,10 +69,9 @@ typedef struct Results_typ
 
 } RESULTS, *Results_ptr;
 
-typedef struct Map_typ
-{
+typedef struct Map_typ {
 	int num_poly;
-	int	poly_clip_flags[1000];
+	int poly_clip_flags[1000];
 	int texture[1000];
 	int sector[1000];
 	int type[1000]; // curb, pave, stripe ect.
@@ -87,16 +83,14 @@ typedef struct Map_typ
 
 } MAP, *Map_ptr;
 
-typedef struct VPoint_typ
-{
+typedef struct VPoint_typ {
 	float x;
 	float y;
 	float z;
-	
+
 } VPOINT, *VPoint_ptr;
 
-typedef struct editor_typ
-{
+typedef struct editor_typ {
 	VPOINT position;
 	BOOL update_flag;
 	BOOL scroll_bar_flag;
@@ -111,13 +105,13 @@ typedef struct editor_typ
 	int current_object_id;
 	BOOL Redraw_editor_map_flag;
 	BOOL editor_mode;
-	float angle;	
+	float angle;
 	float delta_angle;
 	float pave_width;
-    float road_width;
+	float road_width;
 	float display_scale;
 	int dialogbar_mode;
-	
+
 	world_ptr wptr;
 
 } EDITOR, *editor_ptr;
@@ -128,12 +122,11 @@ extern "C" {
 
 float *Rotate(CAMERA cam);
 Results_ptr zippy(void);
-	Map_ptr GetMap(void);
-	void SetMap(Map_ptr edmap);
+Map_ptr GetMap(void);
+void SetMap(Map_ptr edmap);
 
 #ifdef __cplusplus
 };
 #endif
-
 
 #endif // __3DENGINE_H__

@@ -30,8 +30,6 @@ LPDIRECTINPUTDEVICE2 g_rgpdevFound[MAX_DINPUT_DEVICES];
 LPDIRECTINPUTDEVICE2 g_pdevCurrent;
 LPDIJOYSTATE js_ptr;
 
-
-
 /*--------------------------------------------------------------------------
 | AddInputDevice
 |
@@ -42,39 +40,36 @@ LPDIJOYSTATE js_ptr;
 |
 *-------------------------------------------------------------------------*/
 
-void AddInputDevice(LPDIRECTINPUTDEVICE pdev, LPCDIDEVICEINSTANCE pdi)
-{
+void AddInputDevice(LPDIRECTINPUTDEVICE pdev, LPCDIDEVICEINSTANCE pdi) {
 
-    if (g_cpdevFound < MAX_DINPUT_DEVICES) 
-	{
+	if (g_cpdevFound < MAX_DINPUT_DEVICES) {
 
-        HRESULT hRes;
+		HRESULT hRes;
 
-        /*
-         *  Convert it to a Device2 so we can Poll() it.
-         */
+		/*
+		 *  Convert it to a Device2 so we can Poll() it.
+		 */
 
-        hRes = pdev->lpVtbl->QueryInterface(
-                    pdev, &IID_IDirectInputDevice2,
-                    (LPVOID *)&g_rgpdevFound[g_cpdevFound]);
+		hRes = pdev->lpVtbl->QueryInterface(
+		    pdev, &IID_IDirectInputDevice2,
+		    (LPVOID *)&g_rgpdevFound[g_cpdevFound]);
 
-        if (SUCCEEDED(hRes)) 
-		{
+		if (SUCCEEDED(hRes)) {
 
-            HMENU hmenu;
+			HMENU hmenu;
 
-            /*
-             *  Add its description to the menu.
-             */
-            hmenu = GetSubMenu(GetMenu(hWndMain), 5); // 5 = menu number 5 horizontally
+			/*
+			 *  Add its description to the menu.
+			 */
+			hmenu = GetSubMenu(GetMenu(hWndMain), 5); // 5 = menu number 5 horizontally
 
-            InsertMenu(hmenu, g_cpdevFound, MF_BYPOSITION | MF_STRING,
-                       IDC_DEVICES + g_cpdevFound,
-                       pdi->tszInstanceName);
+			InsertMenu(hmenu, g_cpdevFound, MF_BYPOSITION | MF_STRING,
+			           IDC_DEVICES + g_cpdevFound,
+			           pdi->tszInstanceName);
 
-            g_cpdevFound++;
-        }
-    }
+			g_cpdevFound++;
+		}
+	}
 }
 
 /*--------------------------------------------------------------------------
@@ -87,18 +82,16 @@ void AddInputDevice(LPDIRECTINPUTDEVICE pdev, LPCDIDEVICEINSTANCE pdi)
 
 HRESULT
 SetDIDwordProperty(LPDIRECTINPUTDEVICE pdev, REFGUID guidProperty,
-                   DWORD dwObject, DWORD dwHow, DWORD dwValue)
-{
-   DIPROPDWORD dipdw;
+                   DWORD dwObject, DWORD dwHow, DWORD dwValue) {
+	DIPROPDWORD dipdw;
 
-   dipdw.diph.dwSize       = sizeof(dipdw);
-   dipdw.diph.dwHeaderSize = sizeof(dipdw.diph);
-   dipdw.diph.dwObj        = dwObject;
-   dipdw.diph.dwHow        = dwHow;
-   dipdw.dwData            = dwValue;
+	dipdw.diph.dwSize = sizeof(dipdw);
+	dipdw.diph.dwHeaderSize = sizeof(dipdw.diph);
+	dipdw.diph.dwObj = dwObject;
+	dipdw.diph.dwHow = dwHow;
+	dipdw.dwData = dwValue;
 
-   return pdev->lpVtbl->SetProperty(pdev, guidProperty, &dipdw.diph);
-
+	return pdev->lpVtbl->SetProperty(pdev, guidProperty, &dipdw.diph);
 }
 
 /*--------------------------------------------------------------------------
@@ -110,62 +103,56 @@ SetDIDwordProperty(LPDIRECTINPUTDEVICE pdev, REFGUID guidProperty,
 |
 *-------------------------------------------------------------------------*/
 
-BOOL InitKeyboardInput(LPDIRECTINPUT pdi)
-{
-   LPDIRECTINPUTDEVICE pdev;
-   DIDEVICEINSTANCE di;
+BOOL InitKeyboardInput(LPDIRECTINPUT pdi) {
+	LPDIRECTINPUTDEVICE pdev;
+	DIDEVICEINSTANCE di;
 
-   // create the DirectInput keyboard device
-   if(pdi->lpVtbl->CreateDevice(pdi, &GUID_SysKeyboard, &pdev, NULL) != DI_OK)
-   {
-      OutputDebugString("IDirectInput::CreateDevice FAILED\n");
-      return FALSE;
-   }
+	// create the DirectInput keyboard device
+	if (pdi->lpVtbl->CreateDevice(pdi, &GUID_SysKeyboard, &pdev, NULL) != DI_OK) {
+		OutputDebugString("IDirectInput::CreateDevice FAILED\n");
+		return FALSE;
+	}
 
-   // set keyboard data format
-   if(pdev->lpVtbl->SetDataFormat(pdev, &c_dfDIKeyboard) != DI_OK)
-   {
-      OutputDebugString("IDirectInputDevice::SetDataFormat FAILED\n");
-      pdev->lpVtbl->Release(pdev);
-      return FALSE;
-   }
+	// set keyboard data format
+	if (pdev->lpVtbl->SetDataFormat(pdev, &c_dfDIKeyboard) != DI_OK) {
+		OutputDebugString("IDirectInputDevice::SetDataFormat FAILED\n");
+		pdev->lpVtbl->Release(pdev);
+		return FALSE;
+	}
 
-   // set the cooperative level
-   if(pdev->lpVtbl->SetCooperativeLevel(pdev, hWndMain,
-      DISCL_NONEXCLUSIVE | DISCL_FOREGROUND) != DI_OK)
-   {
-      OutputDebugString("IDirectInputDevice::SetCooperativeLevel FAILED\n");
-      pdev->lpVtbl->Release(pdev);
-      return FALSE;
-   }
+	// set the cooperative level
+	if (pdev->lpVtbl->SetCooperativeLevel(pdev, hWndMain,
+	                                      DISCL_NONEXCLUSIVE | DISCL_FOREGROUND) != DI_OK) {
+		OutputDebugString("IDirectInputDevice::SetCooperativeLevel FAILED\n");
+		pdev->lpVtbl->Release(pdev);
+		return FALSE;
+	}
 
-   // set buffer size
-   if (SetDIDwordProperty(pdev, DIPROP_BUFFERSIZE, 0, DIPH_DEVICE, KEYBUFSIZE) != DI_OK)
-   {
-      OutputDebugString("IDirectInputDevice::SetProperty(DIPH_DEVICE) FAILED\n");
-      pdev->lpVtbl->Release(pdev);
-      return FALSE;
-   }
+	// set buffer size
+	if (SetDIDwordProperty(pdev, DIPROP_BUFFERSIZE, 0, DIPH_DEVICE, KEYBUFSIZE) != DI_OK) {
+		OutputDebugString("IDirectInputDevice::SetProperty(DIPH_DEVICE) FAILED\n");
+		pdev->lpVtbl->Release(pdev);
+		return FALSE;
+	}
 
-   //
-   // Get the name of the primary keyboard so we can add it to the menu.
-   //
-   di.dwSize = sizeof(di);
-   if (pdev->lpVtbl->GetDeviceInfo(pdev, &di) != DI_OK)
-   {
-      OutputDebugString("IDirectInputDevice::GetDeviceInfo FAILED\n");
-      pdev->lpVtbl->Release(pdev);
-      return FALSE;
-   }
+	//
+	// Get the name of the primary keyboard so we can add it to the menu.
+	//
+	di.dwSize = sizeof(di);
+	if (pdev->lpVtbl->GetDeviceInfo(pdev, &di) != DI_OK) {
+		OutputDebugString("IDirectInputDevice::GetDeviceInfo FAILED\n");
+		pdev->lpVtbl->Release(pdev);
+		return FALSE;
+	}
 
-   //
-   // Add it to our list of devices.  If AddInputDevice succeeds,
-   // he will do an AddRef.
-   //
-   AddInputDevice(pdev, &di);
-   pdev->lpVtbl->Release(pdev);
+	//
+	// Add it to our list of devices.  If AddInputDevice succeeds,
+	// he will do an AddRef.
+	//
+	AddInputDevice(pdev, &di);
+	pdev->lpVtbl->Release(pdev);
 
-   return TRUE;
+	return TRUE;
 }
 
 /*--------------------------------------------------------------------------
@@ -179,100 +166,91 @@ BOOL InitKeyboardInput(LPDIRECTINPUT pdi)
 |
 *-------------------------------------------------------------------------*/
 
-BOOL FAR PASCAL InitJoystickInput(LPCDIDEVICEINSTANCE pdinst, LPVOID pvRef)
-{
-   LPDIRECTINPUT pdi = pvRef;
-   LPDIRECTINPUTDEVICE pdev;
-   DIPROPRANGE diprg;
+BOOL FAR PASCAL InitJoystickInput(LPCDIDEVICEINSTANCE pdinst, LPVOID pvRef) {
+	LPDIRECTINPUT pdi = pvRef;
+	LPDIRECTINPUTDEVICE pdev;
+	DIPROPRANGE diprg;
 
-   // create the DirectInput joystick device
-   if(pdi->lpVtbl->CreateDevice(pdi, &pdinst->guidInstance, &pdev, NULL) != DI_OK)
-   {
-		MessageBox(hWndMain,"IDirectInput::CreateDevice FAILED",NULL,MB_OK);
-	
-      OutputDebugString("IDirectInput::CreateDevice FAILED\n");
-      return DIENUM_CONTINUE;
-   }
+	// create the DirectInput joystick device
+	if (pdi->lpVtbl->CreateDevice(pdi, &pdinst->guidInstance, &pdev, NULL) != DI_OK) {
+		MessageBox(hWndMain, "IDirectInput::CreateDevice FAILED", NULL, MB_OK);
 
-   // set joystick data format
-   if(pdev->lpVtbl->SetDataFormat(pdev, &c_dfDIJoystick) != DI_OK)
-   {
-	   MessageBox(hWndMain,"IDirectInputDevice::SetDataFormat FAILED",NULL,MB_OK);
-      OutputDebugString("IDirectInputDevice::SetDataFormat FAILED\n");
-      pdev->lpVtbl->Release(pdev);
-      return DIENUM_CONTINUE;
-   }
+		OutputDebugString("IDirectInput::CreateDevice FAILED\n");
+		return DIENUM_CONTINUE;
+	}
 
-   // set the cooperative level
-   if(pdev->lpVtbl->SetCooperativeLevel(pdev, hWndMain,
-      DISCL_NONEXCLUSIVE | DISCL_FOREGROUND) != DI_OK)
-   {
-	   MessageBox(hWndMain,"IDirectInputDevice::SetCooperativeLevel FAILED",NULL,MB_OK);
-      OutputDebugString("IDirectInputDevice::SetCooperativeLevel FAILED\n");
-      pdev->lpVtbl->Release(pdev);
-      return DIENUM_CONTINUE;
-   }
+	// set joystick data format
+	if (pdev->lpVtbl->SetDataFormat(pdev, &c_dfDIJoystick) != DI_OK) {
+		MessageBox(hWndMain, "IDirectInputDevice::SetDataFormat FAILED", NULL, MB_OK);
+		OutputDebugString("IDirectInputDevice::SetDataFormat FAILED\n");
+		pdev->lpVtbl->Release(pdev);
+		return DIENUM_CONTINUE;
+	}
 
-   // set X-axis range to (-1000 ... +1000)
-   // This lets us test against 0 to see which way the stick is pointed.
+	// set the cooperative level
+	if (pdev->lpVtbl->SetCooperativeLevel(pdev, hWndMain,
+	                                      DISCL_NONEXCLUSIVE | DISCL_FOREGROUND) != DI_OK) {
+		MessageBox(hWndMain, "IDirectInputDevice::SetCooperativeLevel FAILED", NULL, MB_OK);
+		OutputDebugString("IDirectInputDevice::SetCooperativeLevel FAILED\n");
+		pdev->lpVtbl->Release(pdev);
+		return DIENUM_CONTINUE;
+	}
 
-   diprg.diph.dwSize       = sizeof(diprg);
-   diprg.diph.dwHeaderSize = sizeof(diprg.diph);
-   diprg.diph.dwObj        = DIJOFS_X;
-   diprg.diph.dwHow        = DIPH_BYOFFSET;
-   diprg.lMin              = -1000;
-   diprg.lMax              = +1000;
+	// set X-axis range to (-1000 ... +1000)
+	// This lets us test against 0 to see which way the stick is pointed.
 
-   if(pdev->lpVtbl->SetProperty(pdev, DIPROP_RANGE, &diprg.diph) != DI_OK)
-   {
-	   MessageBox(hWndMain,"IDirectInputDevice::SetProperty(DIPH_RANGE) FAILED",NULL,MB_OK);
-      OutputDebugString("IDirectInputDevice::SetProperty(DIPH_RANGE) FAILED\n");
-      pdev->lpVtbl->Release(pdev);
-      return FALSE;
-   }
+	diprg.diph.dwSize = sizeof(diprg);
+	diprg.diph.dwHeaderSize = sizeof(diprg.diph);
+	diprg.diph.dwObj = DIJOFS_X;
+	diprg.diph.dwHow = DIPH_BYOFFSET;
+	diprg.lMin = -1000;
+	diprg.lMax = +1000;
 
-   // And again for Y-axis range
-   
-   diprg.diph.dwObj        = DIJOFS_Y;
+	if (pdev->lpVtbl->SetProperty(pdev, DIPROP_RANGE, &diprg.diph) != DI_OK) {
+		MessageBox(hWndMain, "IDirectInputDevice::SetProperty(DIPH_RANGE) FAILED", NULL, MB_OK);
+		OutputDebugString("IDirectInputDevice::SetProperty(DIPH_RANGE) FAILED\n");
+		pdev->lpVtbl->Release(pdev);
+		return FALSE;
+	}
 
-   if(pdev->lpVtbl->SetProperty(pdev, DIPROP_RANGE, &diprg.diph) != DI_OK)
-   {
-	   MessageBox(hWndMain,"IDirectInputDevice::SetProperty(DIPH_RANGE) FAILED",NULL,MB_OK);
-      OutputDebugString("IDirectInputDevice::SetProperty(DIPH_RANGE) FAILED\n");
-      pdev->lpVtbl->Release(pdev);
-      return FALSE;
-   }
+	// And again for Y-axis range
 
-   // set X axis dead zone to 50% (to avoid accidental turning)
-   // Units are ten thousandths, so 50% = 5000/10000.
-   
-   if (SetDIDwordProperty(pdev, DIPROP_DEADZONE, DIJOFS_X, DIPH_BYOFFSET, 2000) != DI_OK)
-   {
-	   MessageBox(hWndMain,"IDirectInputDevice::SetProperty(DIPH_DEADZONE) FAILED",NULL,MB_OK);
-      OutputDebugString("IDirectInputDevice::SetProperty(DIPH_DEADZONE) FAILED\n");
-      pdev->lpVtbl->Release(pdev);
-      return FALSE;
-   }
+	diprg.diph.dwObj = DIJOFS_Y;
 
+	if (pdev->lpVtbl->SetProperty(pdev, DIPROP_RANGE, &diprg.diph) != DI_OK) {
+		MessageBox(hWndMain, "IDirectInputDevice::SetProperty(DIPH_RANGE) FAILED", NULL, MB_OK);
+		OutputDebugString("IDirectInputDevice::SetProperty(DIPH_RANGE) FAILED\n");
+		pdev->lpVtbl->Release(pdev);
+		return FALSE;
+	}
 
-   // set Y axis dead zone to 50% (to avoid accidental thrust)
-   // Units are ten thousandths, so 50% = 5000/10000.
-   
-   if (SetDIDwordProperty(pdev, DIPROP_DEADZONE, DIJOFS_Y, DIPH_BYOFFSET, 5000) != DI_OK)
-   {
-	   MessageBox(hWndMain,"IDirectInputDevice::SetProperty(DIPH_DEADZONE) FAILED",NULL,MB_OK);
-      OutputDebugString("IDirectInputDevice::SetProperty(DIPH_DEADZONE) FAILED\n");
-      pdev->lpVtbl->Release(pdev);
-      return FALSE;
-   }
+	// set X axis dead zone to 50% (to avoid accidental turning)
+	// Units are ten thousandths, so 50% = 5000/10000.
 
-   // Add it to our list of devices.  If AddInputDevice succeeds,
-   // he will do an AddRef.
-   
-   AddInputDevice(pdev, pdinst);
-   pdev->lpVtbl->Release(pdev);
+	if (SetDIDwordProperty(pdev, DIPROP_DEADZONE, DIJOFS_X, DIPH_BYOFFSET, 2000) != DI_OK) {
+		MessageBox(hWndMain, "IDirectInputDevice::SetProperty(DIPH_DEADZONE) FAILED", NULL, MB_OK);
+		OutputDebugString("IDirectInputDevice::SetProperty(DIPH_DEADZONE) FAILED\n");
+		pdev->lpVtbl->Release(pdev);
+		return FALSE;
+	}
 
-   return DIENUM_CONTINUE;
+	// set Y axis dead zone to 50% (to avoid accidental thrust)
+	// Units are ten thousandths, so 50% = 5000/10000.
+
+	if (SetDIDwordProperty(pdev, DIPROP_DEADZONE, DIJOFS_Y, DIPH_BYOFFSET, 5000) != DI_OK) {
+		MessageBox(hWndMain, "IDirectInputDevice::SetProperty(DIPH_DEADZONE) FAILED", NULL, MB_OK);
+		OutputDebugString("IDirectInputDevice::SetProperty(DIPH_DEADZONE) FAILED\n");
+		pdev->lpVtbl->Release(pdev);
+		return FALSE;
+	}
+
+	// Add it to our list of devices.  If AddInputDevice succeeds,
+	// he will do an AddRef.
+
+	AddInputDevice(pdev, pdinst);
+	pdev->lpVtbl->Release(pdev);
+
+	return DIENUM_CONTINUE;
 }
 
 /*--------------------------------------------------------------------------
@@ -284,57 +262,51 @@ BOOL FAR PASCAL InitJoystickInput(LPCDIDEVICEINSTANCE pdinst, LPVOID pvRef)
 |
 *-------------------------------------------------------------------------*/
 
-BOOL InitInput(HINSTANCE hInst, HWND hWnd)
-{
-   LPDIRECTINPUT pdi;
-   BOOL fRc;
+BOOL InitInput(HINSTANCE hInst, HWND hWnd) {
+	LPDIRECTINPUT pdi;
+	BOOL fRc;
 
-   hWndMain = hWnd;
+	hWndMain = hWnd;
 
-   // Note: Joystick support is a DirectX 5.0 feature.
-   // Since we also want to run on DirectX 3.0, we will start out
-   // with DirectX 3.0 to make sure that at least we get the keyboard.
+	// Note: Joystick support is a DirectX 5.0 feature.
+	// Since we also want to run on DirectX 3.0, we will start out
+	// with DirectX 3.0 to make sure that at least we get the keyboard.
 
-   // create the DirectInput interface object
-   if(DirectInputCreate(hInst, 0x0300, &pdi, NULL) != DI_OK)
-   {
-      OutputDebugString("DirectInputCreate 3.0 FAILED\n");
-      return FALSE;
-   }
+	// create the DirectInput interface object
+	if (DirectInputCreate(hInst, 0x0300, &pdi, NULL) != DI_OK) {
+		OutputDebugString("DirectInputCreate 3.0 FAILED\n");
+		return FALSE;
+	}
 
-   fRc = InitKeyboardInput(pdi);
-   pdi->lpVtbl->Release(pdi);       // Finished with DX 3.0
+	fRc = InitKeyboardInput(pdi);
+	pdi->lpVtbl->Release(pdi); // Finished with DX 3.0
 
-   if (!fRc) 
-   {
-	   MessageBox(hWnd,"DirectInputCreate 3.0 FAILED - no keyboard support",NULL,MB_OK);
-       return FALSE;
-   }
+	if (!fRc) {
+		MessageBox(hWnd, "DirectInputCreate 3.0 FAILED - no keyboard support", NULL, MB_OK);
+		return FALSE;
+	}
 
-   // create the DirectInput 5.0 interface object
-   if(DirectInputCreate(hInst, DIRECTINPUT_VERSION, &pdi, NULL) == DI_OK)
-   {
-      // Enumerate the joystick devices.  If it doesn't work, oh well,
-      // at least we got the keyboard.
-      
-      pdi->lpVtbl->EnumDevices(pdi, DIDEVTYPE_JOYSTICK,
-                               InitJoystickInput, pdi, DIEDFL_ATTACHEDONLY);
+	// create the DirectInput 5.0 interface object
+	if (DirectInputCreate(hInst, DIRECTINPUT_VERSION, &pdi, NULL) == DI_OK) {
+		// Enumerate the joystick devices.  If it doesn't work, oh well,
+		// at least we got the keyboard.
 
-      pdi->lpVtbl->Release(pdi);    // Finished with DX 5.0.
+		pdi->lpVtbl->EnumDevices(pdi, DIDEVTYPE_JOYSTICK,
+		                         InitJoystickInput, pdi, DIEDFL_ATTACHEDONLY);
 
-   } 
-   else 
-   {
-	  MessageBox(hWnd,"DirectInputCreate 5.0 FAILED - no joystick support",NULL,MB_OK);
-      OutputDebugString("DirectInputCreate 5.0 FAILED - no joystick support\n");
-   }
+		pdi->lpVtbl->Release(pdi); // Finished with DX 5.0.
 
-   // Default device is the keyboard
-   if(PickInputDevice(0) == FALSE)
-	   MessageBox(hWnd,"DirectInputCreate 5.0 FAILED - couldn't select joystick",NULL,MB_OK);
+	} else {
+		MessageBox(hWnd, "DirectInputCreate 5.0 FAILED - no joystick support", NULL, MB_OK);
+		OutputDebugString("DirectInputCreate 5.0 FAILED - no joystick support\n");
+	}
 
-   // if we get here, we were successful
-   return TRUE;
+	// Default device is the keyboard
+	if (PickInputDevice(0) == FALSE)
+		MessageBox(hWnd, "DirectInputCreate 5.0 FAILED - couldn't select joystick", NULL, MB_OK);
+
+	// if we get here, we were successful
+	return TRUE;
 }
 
 /*--------------------------------------------------------------------------
@@ -342,29 +314,24 @@ BOOL InitInput(HINSTANCE hInst, HWND hWnd)
 |
 | Cleans up all DirectInput objects.
 *-------------------------------------------------------------------------*/
-void CleanupInput(void)
-{
-   int idev;
+void CleanupInput(void) {
+	int idev;
 
-   // make sure the device is unacquired
-   // it doesn't harm to unacquire a device that isn't acquired
+	// make sure the device is unacquired
+	// it doesn't harm to unacquire a device that isn't acquired
 
-   if (g_pdevCurrent)
-   {
-      IDirectInputDevice_Unacquire(g_pdevCurrent);
-   }
+	if (g_pdevCurrent) {
+		IDirectInputDevice_Unacquire(g_pdevCurrent);
+	}
 
-   // release all the devices we created
-   for (idev = 0; idev < g_cpdevFound; idev++)
-   {
-      if (g_rgpdevFound[idev]) {
-         IDirectInputDevice_Release(g_rgpdevFound[idev]);
-         g_rgpdevFound[idev] = 0;
-      }
-   }
-
+	// release all the devices we created
+	for (idev = 0; idev < g_cpdevFound; idev++) {
+		if (g_rgpdevFound[idev]) {
+			IDirectInputDevice_Release(g_rgpdevFound[idev]);
+			g_rgpdevFound[idev] = 0;
+		}
+	}
 }
-
 
 /*--------------------------------------------------------------------------
 | ReacquireInput
@@ -373,140 +340,124 @@ void CleanupInput(void)
 | that means
 | that we are already acquired and that DirectInput did nothing.
 *-------------------------------------------------------------------------*/
-BOOL ReacquireInput(void)
-{
-    HRESULT hRes;
+BOOL ReacquireInput(void) {
+	HRESULT hRes;
 
-    // if we have a current device
-    if(g_pdevCurrent)
-    {
-       // acquire the device
-       hRes = IDirectInputDevice_Acquire(g_pdevCurrent);
-       if(SUCCEEDED(hRes))
-       {
-          // acquisition successful
-          return TRUE;
-       }
-       else
-       {
-          // acquisition failed
-          return FALSE;
-       }
-    }
-    else
-    {
-       // we don't have a current device
-       return FALSE;
-    }
-
+	// if we have a current device
+	if (g_pdevCurrent) {
+		// acquire the device
+		hRes = IDirectInputDevice_Acquire(g_pdevCurrent);
+		if (SUCCEEDED(hRes)) {
+			// acquisition successful
+			return TRUE;
+		} else {
+			// acquisition failed
+			return FALSE;
+		}
+	} else {
+		// we don't have a current device
+		return FALSE;
+	}
 }
-
 
 /*--------------------------------------------------------------------------
 | ReadKeyboardInput
 |
 | Requests keyboard data and performs any needed processing.
 *-------------------------------------------------------------------------*/
-DWORD ReadKeyboardInput(void)
-{
-   DIDEVICEOBJECTDATA      rgKeyData[KEYBUFSIZE];
-   DWORD                   dwEvents;
-   DWORD                   dw;
-   static DWORD            dwKeyState = 0;
-   HRESULT                 hRes;
+DWORD ReadKeyboardInput(void) {
+	DIDEVICEOBJECTDATA rgKeyData[KEYBUFSIZE];
+	DWORD dwEvents;
+	DWORD dw;
+	static DWORD dwKeyState = 0;
+	HRESULT hRes;
 
-   // get data from the keyboard
-   dwEvents = KEYBUFSIZE;
-   hRes = IDirectInputDevice_GetDeviceData(g_pdevCurrent,
-                                           sizeof(DIDEVICEOBJECTDATA),
-                                           rgKeyData, &dwEvents, 0);
+	// get data from the keyboard
+	dwEvents = KEYBUFSIZE;
+	hRes = IDirectInputDevice_GetDeviceData(g_pdevCurrent,
+	                                        sizeof(DIDEVICEOBJECTDATA),
+	                                        rgKeyData, &dwEvents, 0);
 
-   if(hRes != DI_OK)
-   {
-      // did the read fail because we lost input for some reason?
-      // if so, then attempt to reacquire.  If the second acquire
-      // fails, then the error from GetDeviceData will be
-      // DIERR_NOTACQUIRED, so we won't get stuck an infinite loop.
-      if(hRes == DIERR_INPUTLOST)
-//         ReacquireInput();
+	if (hRes != DI_OK) {
+		// did the read fail because we lost input for some reason?
+		// if so, then attempt to reacquire.  If the second acquire
+		// fails, then the error from GetDeviceData will be
+		// DIERR_NOTACQUIRED, so we won't get stuck an infinite loop.
+		if (hRes == DIERR_INPUTLOST)
+			//         ReacquireInput();
 
-      // return the fact that we did not read any data
-      return 0;
-   }
+			// return the fact that we did not read any data
+			return 0;
+	}
 
-      // process the data
-      for(dw = 0; dw < dwEvents; dw++)
-      {
-         switch(rgKeyData[dw].dwOfs)
-         {
-         // fire
-         case DIK_SPACE:
-            if(rgKeyData[dw].dwData & 0x80)
-               dwKeyState |= KEY_FIRE;
-            else
-               dwKeyState &= (DWORD)~KEY_FIRE;
-            break;
+	// process the data
+	for (dw = 0; dw < dwEvents; dw++) {
+		switch (rgKeyData[dw].dwOfs) {
+		// fire
+		case DIK_SPACE:
+			if (rgKeyData[dw].dwData & 0x80)
+				dwKeyState |= KEY_FIRE;
+			else
+				dwKeyState &= (DWORD)~KEY_FIRE;
+			break;
 
-         // stop
-         case DIK_NUMPAD5:
-            if(rgKeyData[dw].dwData & 0x80)
-               dwKeyState |= KEY_STOP;
-            else
-               dwKeyState &= ~KEY_STOP;
-            break;
+		// stop
+		case DIK_NUMPAD5:
+			if (rgKeyData[dw].dwData & 0x80)
+				dwKeyState |= KEY_STOP;
+			else
+				dwKeyState &= ~KEY_STOP;
+			break;
 
-         // shield
-         case DIK_NUMPAD7:
-            if(rgKeyData[dw].dwData & 0x80)
-               dwKeyState |= KEY_BRAKE;
-            else
-               dwKeyState &= ~KEY_BRAKE;
-            break;
+		// shield
+		case DIK_NUMPAD7:
+			if (rgKeyData[dw].dwData & 0x80)
+				dwKeyState |= KEY_BRAKE;
+			else
+				dwKeyState &= ~KEY_BRAKE;
+			break;
 
-         // thrust
-         case DIK_UP:
-         case DIK_NUMPAD8:
-            if(rgKeyData[dw].dwData & 0x80)
-               dwKeyState |= KEY_UP;
-            else
-               dwKeyState &= ~KEY_UP;
-            break;
+		// thrust
+		case DIK_UP:
+		case DIK_NUMPAD8:
+			if (rgKeyData[dw].dwData & 0x80)
+				dwKeyState |= KEY_UP;
+			else
+				dwKeyState &= ~KEY_UP;
+			break;
 
-         // reverse thrust
-         case DIK_DOWN:
-         case DIK_NUMPAD2:
-            if(rgKeyData[dw].dwData & 0x80)
-               dwKeyState |= KEY_DOWN;
-            else
-               dwKeyState &= ~KEY_DOWN;
-            break;
+		// reverse thrust
+		case DIK_DOWN:
+		case DIK_NUMPAD2:
+			if (rgKeyData[dw].dwData & 0x80)
+				dwKeyState |= KEY_DOWN;
+			else
+				dwKeyState &= ~KEY_DOWN;
+			break;
 
-         // rotate left
-         case DIK_LEFT:
-         case DIK_NUMPAD4:
-            if(rgKeyData[dw].dwData & 0x80)
-               dwKeyState |= KEY_LEFT;
-            else
-               dwKeyState &= ~KEY_LEFT;
-            break;
+		// rotate left
+		case DIK_LEFT:
+		case DIK_NUMPAD4:
+			if (rgKeyData[dw].dwData & 0x80)
+				dwKeyState |= KEY_LEFT;
+			else
+				dwKeyState &= ~KEY_LEFT;
+			break;
 
-         // rotate right
-         case DIK_RIGHT:
-         case DIK_NUMPAD6:
-            if(rgKeyData[dw].dwData & 0x80)
-               dwKeyState |= KEY_RIGHT;
-            else
-               dwKeyState &= ~KEY_RIGHT;
-            break;
-         }
+		// rotate right
+		case DIK_RIGHT:
+		case DIK_NUMPAD6:
+			if (rgKeyData[dw].dwData & 0x80)
+				dwKeyState |= KEY_RIGHT;
+			else
+				dwKeyState &= ~KEY_RIGHT;
+			break;
+		}
+	}
 
-   }
-
-   // return the state of the keys to the caller
-   return dwKeyState;
-
+	// return the state of the keys to the caller
+	return dwKeyState;
 }
-
 
 /*--------------------------------------------------------------------------
 | ReadJoystickInput
@@ -514,75 +465,69 @@ DWORD ReadKeyboardInput(void)
 | Requests joystick data and performs any needed processing.
 |
 *-------------------------------------------------------------------------*/
-LPDIJOYSTATE ReadJoystickInput(void)
-{
-	//DWORD                   dwKeyState;
-	HRESULT                 hRes;
-
+LPDIJOYSTATE ReadJoystickInput(void) {
+	// DWORD                   dwKeyState;
+	HRESULT hRes;
 
 	// poll the joystick to read the current state
 	hRes = IDirectInputDevice2_Poll(g_pdevCurrent);
 
 	// get data from the joystick
 	hRes = IDirectInputDevice_GetDeviceState(g_pdevCurrent,
-                                            sizeof(DIJOYSTATE), &js);
+	                                         sizeof(DIJOYSTATE), &js);
 
-	if(hRes != DI_OK)
-	{
+	if (hRes != DI_OK) {
 		// did the read fail because we lost input for some reason?
 		// if so, then attempt to reacquire.  If the second acquire
 		// fails, then the error from GetDeviceData will be
 		// DIERR_NOTACQUIRED, so we won't get stuck an infinite loop.
-		
-		if(hRes == DIERR_INPUTLOST)
-		{
-//			ReacquireInput();
+
+		if (hRes == DIERR_INPUTLOST) {
+			//			ReacquireInput();
 		}
-	  
+
 		// return the fact that we did not read any data
 		return 0;
 	}
 
-
 	// Now study the position of the stick and the buttons.
-   /*
-	dwKeyState = 0;
+	/*
+	 dwKeyState = 0;
 
-	if (js.lX < 0) 
-	{
-		dwKeyState |= KEY_LEFT;
-	} 
-	else if (js.lX > 0) 
-	{
-		dwKeyState |= KEY_RIGHT;
-	}
+	 if (js.lX < 0)
+	 {
+	     dwKeyState |= KEY_LEFT;
+	 }
+	 else if (js.lX > 0)
+	 {
+	     dwKeyState |= KEY_RIGHT;
+	 }
 
-	if (js.lY < 0) 
-	{
-		dwKeyState |= KEY_UP;
-	} 
-	else if (js.lY > 0) 
-	{
-		dwKeyState |= KEY_DOWN;
-	}
+	 if (js.lY < 0)
+	 {
+	     dwKeyState |= KEY_UP;
+	 }
+	 else if (js.lY > 0)
+	 {
+	     dwKeyState |= KEY_DOWN;
+	 }
 
-	if (js.rgbButtons[0] & 0x80) 
-	{
-		dwKeyState |= KEY_FIRE;
-	}
+	 if (js.rgbButtons[0] & 0x80)
+	 {
+	     dwKeyState |= KEY_FIRE;
+	 }
 
-	if (js.rgbButtons[1] & 0x80) 
-	{
-		dwKeyState |= KEY_BRAKE;
-	}
+	 if (js.rgbButtons[1] & 0x80)
+	 {
+	     dwKeyState |= KEY_BRAKE;
+	 }
 
-	if (js.rgbButtons[2] & 0x80) 
-	{
-		dwKeyState |= KEY_STOP;
-	}
-*/
+	 if (js.rgbButtons[2] & 0x80)
+	 {
+	     dwKeyState |= KEY_STOP;
+	 }
+ */
 	return &js;
-
 }
 
 /*--------------------------------------------------------------------------
@@ -592,32 +537,26 @@ LPDIJOYSTATE ReadJoystickInput(void)
 |
 *-------------------------------------------------------------------------*/
 
-BOOL PickInputDevice(int n)
-{
-    if (n < g_cpdevFound) 
-	{
-        //  Unacquire the old device.
-         
-        if (g_pdevCurrent) 
-		{
-            IDirectInputDevice_Unacquire(g_pdevCurrent);
-        }
+BOOL PickInputDevice(int n) {
+	if (n < g_cpdevFound) {
+		//  Unacquire the old device.
 
-        //  Move to the new device.
-         
-        g_pdevCurrent = g_rgpdevFound[n];
- 
- 
-        CheckMenuRadioItem(GetSubMenu(GetMenu(hWndMain), 5),
-                           IDC_DEVICES, IDC_DEVICES + g_cpdevFound - 1,
-                           IDC_DEVICES + n, MF_BYCOMMAND);
+		if (g_pdevCurrent) {
+			IDirectInputDevice_Unacquire(g_pdevCurrent);
+		}
 
-//        ReacquireInput();
+		//  Move to the new device.
 
-        return TRUE;
-    } 
-	else 
-	{
-        return FALSE;
-    }
+		g_pdevCurrent = g_rgpdevFound[n];
+
+		CheckMenuRadioItem(GetSubMenu(GetMenu(hWndMain), 5),
+		                   IDC_DEVICES, IDC_DEVICES + g_cpdevFound - 1,
+		                   IDC_DEVICES + n, MF_BYCOMMAND);
+
+		//        ReacquireInput();
+
+		return TRUE;
+	} else {
+		return FALSE;
+	}
 }

@@ -102,7 +102,7 @@ BOOL DSReloadSoundBuffer(IDirectSoundBuffer *pDSB, LPCTSTR lpName);
 //
 ///////////////////////////////////////////////////////////////////////////////
 BOOL DSGetWaveResource(HMODULE hModule, LPCTSTR lpName,
-    WAVEFORMATEX **ppWaveHeader, BYTE **ppbWaveData, DWORD *pdwWaveSize);
+                       WAVEFORMATEX **ppWaveHeader, BYTE **ppbWaveData, DWORD *pdwWaveSize);
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -210,7 +210,7 @@ IDirectSoundBuffer *SndObjGetFreeBuffer(HSNDOBJ hSO);
 BOOL DSFillSoundBuffer(IDirectSoundBuffer *pDSB, BYTE *pbWaveData, DWORD dwWaveSize);
 BOOL DSParseWaveResource(void *pvRes, WAVEFORMATEX **ppWaveHeader, BYTE **ppbWaveData, DWORD *pdwWaveSize);
 
-BOOL SndObjSetFrequency(HSNDOBJ hsoBeginLevel,int frequency); //extra
+BOOL SndObjSetFrequency(HSNDOBJ hsoBeginLevel, int frequency); // extra
 
 #ifdef __cplusplus
 }

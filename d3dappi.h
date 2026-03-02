@@ -33,7 +33,7 @@
 #include <d3d.h>
 #include "d3dapp.h"
 #include "d3dmacs.h"
-//#include "lclib.h"  /* lclib is a override for standard string lib */
+// #include "lclib.h"  /* lclib is a override for standard string lib */
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,9 +43,15 @@ extern "C" {
  * MACROS
  */
 #undef ATTEMPT
-#define ATTEMPT(x) if (!(x)) goto exit_with_error
+#define ATTEMPT(x) \
+	if (!(x))      \
+	goto exit_with_error
 #undef RELEASE
-#define RELEASE(x) if (x) { x->lpVtbl->Release(x); x = NULL; }
+#define RELEASE(x)             \
+	if (x) {                   \
+		x->lpVtbl->Release(x); \
+		x = NULL;              \
+	}
 #undef MAX
 #define MAX(x, y) ((x) > (y)) ? (x) : (y)
 #undef MIN
@@ -63,9 +69,9 @@ extern BOOL bD3DAppInitialized;
 extern HRESULT LastError;
 extern LPDIRECTDRAWCLIPPER lpClipper;
 extern LPDIRECTDRAWPALETTE lpPalette;
-extern BOOL(*D3DDeviceDestroyCallback)(LPVOID);
+extern BOOL (*D3DDeviceDestroyCallback)(LPVOID);
 extern LPVOID D3DDeviceDestroyCallbackContext;
-extern BOOL(*D3DDeviceCreateCallback)(int, int, LPDIRECT3DVIEWPORT2*, LPVOID);
+extern BOOL (*D3DDeviceCreateCallback)(int, int, LPDIRECT3DVIEWPORT2 *, LPVOID);
 extern LPVOID D3DDeviceCreateCallbackContext;
 extern BOOL bPrimaryPalettized;
 extern BOOL bPaletteActivate;
@@ -91,12 +97,12 @@ extern int CallbackRefCount;
  */
 BOOL D3DAppISetRenderState(void);
 BOOL D3DAppIEnumDevices(void);
-BOOL D3DAppIPickDriver(int* driver, DWORD depths);
+BOOL D3DAppIPickDriver(int *driver, DWORD depths);
 BOOL D3DAppICreateD3D(void);
 BOOL D3DAppIEnumTextureFormats(void);
 BOOL D3DAppICreateZBuffer(int w, int h, int driver);
 BOOL D3DAppICreateDevice(int driver);
-BOOL D3DAppILoadTextureSurf(int n, BOOL* bInVideo);
+BOOL D3DAppILoadTextureSurf(int n, BOOL *bInVideo);
 BOOL D3DAppIGetTextureHandle(int n);
 BOOL D3DAppILoadAllTextures(void);
 void D3DAppIReleaseTexture(int n);
@@ -106,35 +112,35 @@ BOOL D3DAppISetCoopLevel(HWND hwnd, BOOL bFullscreen);
 BOOL D3DAppISetDisplayMode(int w, int h, int bpp);
 BOOL D3DAppICheckForPalettized(void);
 BOOL D3DAppIRestoreDispMode(void);
-BOOL D3DAppIVerifyDriverAndMode(int* lpdriver, int* lpmode);
+BOOL D3DAppIVerifyDriverAndMode(int *lpdriver, int *lpmode);
 BOOL D3DAppIFilterDrivers(int mode);
 DWORD D3DAppTotalVideoMemory(void);
 BOOL D3DAppIEnumDisplayModes(void);
-BOOL D3DAppIPickDisplayMode(int* mode, DWORD depths);
+BOOL D3DAppIPickDisplayMode(int *mode, DWORD depths);
 BOOL D3DAppISetDispMode(int w, int h, int bpp);
 BOOL D3DAppICreateDD(DWORD flags);
 BOOL D3DAppIFilterDisplayModes(int driver);
 HRESULT D3DAppICreateSurface(LPDDSURFACEDESC lpDDSurfDesc,
-                LPDIRECTDRAWSURFACE FAR *lpDDSurface);
+                             LPDIRECTDRAWSURFACE FAR *lpDDSurface);
 HRESULT D3DAppIGetSurfDesc(LPDDSURFACEDESC lpDDSurfDesc,
-			   LPDIRECTDRAWSURFACE lpDDSurf);
+                           LPDIRECTDRAWSURFACE lpDDSurf);
 BOOL D3DAppICreateBuffers(HWND hwnd, int w, int h, int bpp, BOOL bFullscreen, BOOL bIsHardware);
 BOOL D3DAppIRememberWindowsMode(void);
 BOOL D3DAppIClearBuffers(void);
 DWORD D3DAppIBPPToDDBD(int bpp);
 void D3DAppIReleasePathList(void);
 LPDIRECTDRAWSURFACE D3DAppILoadSurface(LPDIRECTDRAW lpDD, LPCSTR lpName,
-				       LPDDSURFACEDESC lpFormat,
-				       DWORD memoryflag);
-void D3DAppISetClientSize(HWND hwnd, int w,int h,BOOL bReturnFromFullscreen);
+                                       LPDDSURFACEDESC lpFormat,
+                                       DWORD memoryflag);
+void D3DAppISetClientSize(HWND hwnd, int w, int h, BOOL bReturnFromFullscreen);
 void D3DAppIGetClientWin(HWND hwnd);
 void D3DAppISetDefaults(void);
 BOOL D3DAppICallDeviceDestroyCallback(void);
 BOOL D3DAppICallDeviceCreateCallback(int w, int h);
-void D3DAppIMergeRectLists(int* dstnum, LPD3DRECT dst, int src1num,
-			   LPD3DRECT src1, int src2num, LPD3DRECT src2);
-void D3DAppICopyRectList(int* dstnum, LPD3DRECT dst, int srcnum,
-			 LPD3DRECT src);
+void D3DAppIMergeRectLists(int *dstnum, LPD3DRECT dst, int src1num,
+                           LPD3DRECT src1, int src2num, LPD3DRECT src2);
+void D3DAppICopyRectList(int *dstnum, LPD3DRECT dst, int srcnum,
+                         LPD3DRECT src);
 
 #ifdef __cplusplus
 extern "C" {
@@ -146,11 +152,10 @@ void D3DAppIValidateDirtyRects(void);
 }
 #endif
 
-BOOL D3DAppIHandleWM_SIZE(LRESULT* lresult, HWND hwnd, UINT message,
-			  WPARAM wParam, LPARAM lParam);
-void D3DAppISetErrorString( LPSTR fmt, ... );
+BOOL D3DAppIHandleWM_SIZE(LRESULT *lresult, HWND hwnd, UINT message,
+                          WPARAM wParam, LPARAM lParam);
+void D3DAppISetErrorString(LPSTR fmt, ...);
 
-void __cdecl dpf( LPSTR fmt, ... );
-
+void __cdecl dpf(LPSTR fmt, ...);
 
 #endif // __D3DAPPI_H__
