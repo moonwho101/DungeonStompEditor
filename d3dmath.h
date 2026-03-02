@@ -27,7 +27,7 @@ LPD3DVECTOR D3DVECTORCrossProduct(LPD3DVECTOR lpd, LPD3DVECTOR lpa, LPD3DVECTOR 
  * lpDst = lpSrc1 * lpSrc2
  * lpDst can be equal to lpSrc1 or lpSrc2
  */
-LPD3DMATRIX MultiplyD3DMATRIX(LPD3DMATRIX lpDst, LPD3DMATRIX lpSrc1, 
+LPD3DMATRIX MultiplyD3DMATRIX(LPD3DMATRIX lpDst, LPD3DMATRIX lpSrc1,
                               LPD3DMATRIX lpSrc2);
 /*
  * -1 d = a
@@ -55,4 +55,3 @@ void spline(LPD3DVECTOR p, float t, LPD3DVECTOR p1, LPD3DVECTOR p2,
 #endif
 
 #endif // __D3DMATH_H__
-

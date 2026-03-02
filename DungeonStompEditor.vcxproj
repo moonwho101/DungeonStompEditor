@@ -15,6 +15,7 @@
     <SccLocalPath />
     <ProjectGuid>{250D04E4-3836-44C9-9F12-37FD045BFB35}</ProjectGuid>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>DungeonStompEditor</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -44,13 +45,13 @@
     <OutDir>..\DungeonStompDirectX12\bin\</OutDir>
     <IntDir>.\Release\</IntDir>
     <LinkIncremental>false</LinkIncremental>
-    <TargetName>DSEdit</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>..\DungeonStompDirectX12\bin\</OutDir>
     <IntDir>.\Debug\</IntDir>
     <LinkIncremental>false</LinkIncremental>
-    <TargetName>DSEdit</TargetName>
+    <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -70,7 +71,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ddraw.lib;dsound.lib;winmm.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>..\DungeonStompDirectX12\bin\DSEdit.exe</OutputFile>
+      <OutputFile>..\DungeonStompDirectX12\bin\DungeonStompEditor.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <ProgramDatabaseFile>.\Release/dsedit.pdb</ProgramDatabaseFile>
       <SubSystem>Windows</SubSystem>
@@ -106,7 +107,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ddraw.lib;dsound.lib;winmm.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>..\DungeonStompDirectX12\bin\DSEdit.exe</OutputFile>
+      <OutputFile>..\DungeonStompDirectX12\bin\DungeonStompEditor.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>..\bin\DSEdit.pdb</ProgramDatabaseFile>

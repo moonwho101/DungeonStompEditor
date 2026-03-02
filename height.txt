@@ -1,6 +1,0 @@
-table -25
-pillar -45
-mug on table 5.00
-chest -24.00
-bucket -14
-trough -14
