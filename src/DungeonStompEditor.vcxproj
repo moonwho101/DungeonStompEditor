@@ -42,13 +42,13 @@
     <_ProjectFileVersion>16.0.31401.40</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>..\DungeonStompDirectX12\bin\</OutDir>
+    <OutDir>..\..\DungeonStompDirectX12\bin\</OutDir>
     <IntDir>.\Release\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>..\DungeonStompDirectX12\bin\</OutDir>
+    <OutDir>..\..\DungeonStompDirectX12\bin\</OutDir>
     <IntDir>.\Debug\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <TargetName>$(ProjectName)</TargetName>
@@ -71,7 +71,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ddraw.lib;dsound.lib;winmm.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>..\DungeonStompDirectX12\bin\DungeonStompEditor.exe</OutputFile>
+      <OutputFile>..\..\DungeonStompDirectX12\bin\DungeonStompEditor.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <ProgramDatabaseFile>.\Release/dsedit.pdb</ProgramDatabaseFile>
       <SubSystem>Windows</SubSystem>
@@ -107,10 +107,10 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>ddraw.lib;dsound.lib;winmm.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>..\DungeonStompDirectX12\bin\DungeonStompEditor.exe</OutputFile>
+      <OutputFile>..\..\DungeonStompDirectX12\bin\DungeonStompEditor.exe</OutputFile>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <ProgramDatabaseFile>..\bin\DSEdit.pdb</ProgramDatabaseFile>
+      <ProgramDatabaseFile>..\..\DungeonStompDirectX12\bin\DungeonStompEditor.pdb</ProgramDatabaseFile>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
     </Link>
