@@ -231,24 +231,29 @@ void DrawDialogControls(HDC hdc, editor_ptr edptr) {
 void DrawScrollBars(HDC hdc, editor_ptr edptr) {
 	int x, y;
 	int x1, y1, x2, y2;
-	float dx, dy;
-	int x_off, y_off;
+	float rx, ry;
 
-	x1 = hscroll.x1 + 13 + 6, y1 = hscroll.y1;
-	x2 = hscroll.x2 - 13 - 6, y2 = hscroll.y2;
+	x1 = hscroll.x1 + 13 + 6;
+	y1 = hscroll.y1;
+	x2 = hscroll.x2 - 13 - 6;
+	y2 = hscroll.y2;
 
-	dx = (float)51200 / (float)(x2 - x1);
-	x_off = -1 * edptr->display_x_offset;
-	x = x1 + (int)((float)x_off / dx);
+	rx = (51200.0f - (float)edptr->display_x_offset) / 102400.0f;
+	if (rx < 0.0f) rx = 0.0f;
+	if (rx > 1.0f) rx = 1.0f;
+	x = x1 + (int)(rx * (float)(x2 - x1));
 
 	DrawScrollButton(hdc, x - 6, y1, DRAW_BUTTON_ON);
 
-	x1 = vscroll.x1, y1 = vscroll.y1 + 13 + 6;
-	x2 = vscroll.x2, y2 = vscroll.y2 - 13 - 6;
+	x1 = vscroll.x1;
+	y1 = vscroll.y1 + 13 + 6;
+	x2 = vscroll.x2;
+	y2 = vscroll.y2 - 13 - 6;
 
-	dy = (float)51200 / (float)(y2 - y1);
-	y_off = -1 * edptr->display_y_offset;
-	y = y1 + (int)((float)y_off / dy);
+	ry = (51200.0f - (float)edptr->display_y_offset) / 102400.0f;
+	if (ry < 0.0f) ry = 0.0f;
+	if (ry > 1.0f) ry = 1.0f;
+	y = y1 + (int)(ry * (float)(y2 - y1));
 
 	DrawScrollButton(hdc, x1, y - 6, DRAW_BUTTON_ON);
 
@@ -261,43 +266,43 @@ void DrawScrollBars(HDC hdc, editor_ptr edptr) {
 
 int UpdateScrollBars(HDC hdc, int x, int y, int button_status, editor_ptr edptr) {
 	int x1, y1, x2, y2;
-	float dx, dy;
-	int x_off, y_off;
+	float rx, ry;
 
-	x1 = hscroll.x1 + 13 + 6, y1 = hscroll.y1;
-	x2 = hscroll.x2 - 13 - 6, y2 = hscroll.y2;
+	x1 = hscroll.x1 + 13 + 6;
+	y1 = hscroll.y1;
+	x2 = hscroll.x2 - 13 - 6;
+	y2 = hscroll.y2;
 
-	if ((x >= x1 && x <= x2) && (y >= y1 && y <= y2)) {
-		dx = (float)51200 / (float)(x2 - x1);
-		x_off = (int)((float)(x - x1) * dx);
-		edptr->display_x_offset = -1 * x_off;
-		if (x_old > 0)
-			DrawScrollButton(hdc, x_old, y1, ERASE_BUTTON);
-
-		DrawScrollButton(hdc, x - 6, y1, DRAW_BUTTON_ON);
-		x_old = x - 6;
+	if ((x >= x1 - 10 && x <= x2 + 10) && (y >= y1 - 10 && y <= y1 + 25)) {
+		int cx = x;
+		if (cx < x1) cx = x1;
+		if (cx > x2) cx = x2;
+		rx = (float)(cx - x1) / (float)(x2 - x1);
+		if (rx < 0.0f) rx = 0.0f;
+		if (rx > 1.0f) rx = 1.0f;
+		edptr->display_x_offset = (int)(51200.0f - rx * 102400.0f);
 		DrawEditorMap(hdc, edptr);
 		edptr->scroll_bar_flag = TRUE;
-	}
-
-	x1 = vscroll.x1, y1 = vscroll.y1 + 13 + 6;
-	x2 = vscroll.x2, y2 = vscroll.y2 - 13 - 6;
-
-	if ((x >= x1 && x <= x2) && (y >= y1 && y <= y2)) {
-		dy = (float)51200 / (float)(y2 - y1);
-		y_off = (int)((float)(y - y1) * dy);
-		edptr->display_y_offset = -1 * y_off;
-		if (y_old > 0)
-			DrawScrollButton(hdc, x1, y_old, ERASE_BUTTON);
-
-		DrawScrollButton(hdc, x1, y - 6, DRAW_BUTTON_ON);
-		y_old = y - 6;
-		DrawEditorMap(hdc, edptr);
-		edptr->scroll_bar_flag = TRUE;
-	}
-
-	if (edptr->scroll_bar_flag == TRUE)
 		return 0;
+	}
+
+	x1 = vscroll.x1;
+	y1 = vscroll.y1 + 13 + 6;
+	x2 = vscroll.x2;
+	y2 = vscroll.y2 - 13 - 6;
+
+	if ((x >= x1 - 10 && x <= x1 + 25) && (y >= y1 - 10 && y <= y2 + 10)) {
+		int cy = y;
+		if (cy < y1) cy = y1;
+		if (cy > y2) cy = y2;
+		ry = (float)(cy - y1) / (float)(y2 - y1);
+		if (ry < 0.0f) ry = 0.0f;
+		if (ry > 1.0f) ry = 1.0f;
+		edptr->display_y_offset = (int)(51200.0f - ry * 102400.0f);
+		DrawEditorMap(hdc, edptr);
+		edptr->scroll_bar_flag = TRUE;
+		return 0;
+	}
 
 	if (UpdateScrollBarButtons(hdc, x, y, hscroll.x1, hscroll.y1,
 	                           hscroll.x1 + 12, hscroll.y1 + 12, button_status) == 1)
@@ -1237,33 +1242,25 @@ void DrawEditorMap(HDC hdc, editor_ptr edptr) {
 	hpen_color = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
 	holdpen_color = SelectObject(hdc, hpen_color);
 
-	start_x = (int)x_off - 260;
-	start_z = (int)z_off - 260;
+	start_x = (int)(-x_off) - 260;
+	end_x = (int)(((float)displaysizex / s) - x_off) + 260;
+	start_z = (int)(-z_off) - 260;
+	end_z = (int)(((float)(displaysizez - 32) / s) - z_off) + 260;
 
-	end_x = (int)((float)displaysizex / s);
-	end_z = (int)((float)displaysizez / s);
+	start_x = (start_x / 20) * 20;
+	start_z = (start_z / 20) * 20;
 
 	if (s * 20 > 2) {
 		for (z = start_z; z < end_z; z += 20) {
-			sx = s * start_x;
-			sz = s * z;
-
-			MoveToEx(hdc, (int)sx, 32 + (int)sz, NULL);
-
-			sx = s * end_x;
-
-			LineTo(hdc, (int)sx, 32 + (int)sz);
+			sz = s * (z_off + (float)z);
+			MoveToEx(hdc, 0, 32 + (int)sz, NULL);
+			LineTo(hdc, displaysizex, 32 + (int)sz);
 		}
 
 		for (x = start_x; x < end_x; x += 20) {
-			sz = s * start_z;
-			sx = s * x;
-
-			MoveToEx(hdc, (int)sx, 32 + (int)sz, NULL);
-
-			sz = s * end_z;
-
-			LineTo(hdc, (int)sx, 32 + (int)sz);
+			sx = s * (x_off + (float)x);
+			MoveToEx(hdc, (int)sx, 32, NULL);
+			LineTo(hdc, (int)sx, displaysizez);
 		}
 	}
 
@@ -1275,26 +1272,21 @@ void DrawEditorMap(HDC hdc, editor_ptr edptr) {
 	hpen_color = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
 	holdpen_color = SelectObject(hdc, hpen_color);
 
-	for (z = start_z; z < end_z; z += 260) {
-		sx = s * start_x;
-		sz = s * z;
+	{
+		int cell_start_x = (start_x / 260) * 260 - 260;
+		int cell_start_z = (start_z / 260) * 260 - 260;
 
-		MoveToEx(hdc, (int)sx, 32 + (int)sz, NULL);
+		for (z = cell_start_z; z < end_z; z += 260) {
+			sz = s * (z_off + (float)z);
+			MoveToEx(hdc, 0, 32 + (int)sz, NULL);
+			LineTo(hdc, displaysizex, 32 + (int)sz);
+		}
 
-		sx = s * end_x;
-
-		LineTo(hdc, (int)sx, 32 + (int)sz);
-	}
-
-	for (x = start_x; x < end_x; x += 260) {
-		sz = s * start_z;
-		sx = s * x;
-
-		MoveToEx(hdc, (int)sx, 32 + (int)sz, NULL);
-
-		sz = s * end_z;
-
-		LineTo(hdc, (int)sx, 32 + (int)sz);
+		for (x = cell_start_x; x < end_x; x += 260) {
+			sx = s * (x_off + (float)x);
+			MoveToEx(hdc, (int)sx, 32, NULL);
+			LineTo(hdc, (int)sx, displaysizez);
+		}
 	}
 
 	SelectObject(hdc, holdpen_color);
