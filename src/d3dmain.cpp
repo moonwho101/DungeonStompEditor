@@ -560,6 +560,11 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	case WM_MOUSEMOVE:
 		xPos = LOWORD(lParam);
 		yPos = HIWORD(lParam);
+
+		if (wParam & MK_LBUTTON) {
+			UpdateScrollBars(hdc, xPos, yPos, LEFT_BUTTON_DOWN, &ed);
+		}
+
 		result = GetDlgItemText(hwnd, IDC_EDIT1, &ybuffer[0], 50);
 		ylocation = atof(ybuffer);
 		result = GetDlgItemText(hwnd, IDC_EDIT4, &ybuffer[0], 50);
@@ -778,19 +783,23 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 		button_number = UpdateScrollBars(hdc, xPos, yPos, LEFT_BUTTON_DOWN, &ed);
 		if (button_number == 1) {
-			ed.display_x_offset += 20;
+			ed.display_x_offset += 1000;
+			if (ed.display_x_offset > 51200) ed.display_x_offset = 51200;
 			DrawEditorMap(hdc, &ed);
 		}
 		if (button_number == 2) {
-			ed.display_x_offset -= 20;
+			ed.display_x_offset -= 1000;
+			if (ed.display_x_offset < -51200) ed.display_x_offset = -51200;
 			DrawEditorMap(hdc, &ed);
 		}
 		if (button_number == 3) {
-			ed.display_y_offset += 20;
+			ed.display_y_offset += 1000;
+			if (ed.display_y_offset > 51200) ed.display_y_offset = 51200;
 			DrawEditorMap(hdc, &ed);
 		}
 		if (button_number == 4) {
-			ed.display_y_offset -= 20;
+			ed.display_y_offset -= 1000;
+			if (ed.display_y_offset < -51200) ed.display_y_offset = -51200;
 			DrawEditorMap(hdc, &ed);
 		}
 
@@ -1246,19 +1255,23 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		if (wParam == 3) {
 			button_number = UpdateScrollBars(hdc, xPos, yPos, LEFT_BUTTON_DOWN, &ed);
 			if (button_number == 1) {
-				ed.display_x_offset += 20;
+				ed.display_x_offset += 1000;
+				if (ed.display_x_offset > 51200) ed.display_x_offset = 51200;
 				DrawEditorMap(hdc, &ed);
 			}
 			if (button_number == 2) {
-				ed.display_x_offset -= 20;
+				ed.display_x_offset -= 1000;
+				if (ed.display_x_offset < -51200) ed.display_x_offset = -51200;
 				DrawEditorMap(hdc, &ed);
 			}
 			if (button_number == 3) {
-				ed.display_y_offset += 20;
+				ed.display_y_offset += 1000;
+				if (ed.display_y_offset > 51200) ed.display_y_offset = 51200;
 				DrawEditorMap(hdc, &ed);
 			}
 			if (button_number == 4) {
-				ed.display_y_offset -= 20;
+				ed.display_y_offset -= 1000;
+				if (ed.display_y_offset < -51200) ed.display_y_offset = -51200;
 				DrawEditorMap(hdc, &ed);
 			}
 		}
@@ -1344,22 +1357,26 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			break;
 
 		case IDC_SCROLL_UP:
-			ed.display_y_offset -= 10;
+			ed.display_y_offset += 1000;
+			if (ed.display_y_offset > 51200) ed.display_y_offset = 51200;
 			DrawEditorMap(hdc, &ed);
 			break;
 
 		case IDC_SCROLL_DOWN:
-			ed.display_y_offset += 10;
+			ed.display_y_offset -= 1000;
+			if (ed.display_y_offset < -51200) ed.display_y_offset = -51200;
 			DrawEditorMap(hdc, &ed);
 			break;
 
 		case IDC_SCROLL_LEFT:
-			ed.display_x_offset -= 10;
+			ed.display_x_offset += 1000;
+			if (ed.display_x_offset > 51200) ed.display_x_offset = 51200;
 			DrawEditorMap(hdc, &ed);
 			break;
 
 		case IDC_SCROLL_RIGHT:
-			ed.display_x_offset += 10;
+			ed.display_x_offset -= 1000;
+			if (ed.display_x_offset < -51200) ed.display_x_offset = -51200;
 			DrawEditorMap(hdc, &ed);
 			break;
 
