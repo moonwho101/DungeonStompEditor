@@ -237,20 +237,28 @@ void DrawScrollBars(HDC hdc, editor_ptr edptr) {
 	x1 = hscroll.x1 + 13 + 6, y1 = hscroll.y1;
 	x2 = hscroll.x2 - 13 - 6, y2 = hscroll.y2;
 
-	dx = (float)51200 / (float)(x2 - x1);
-	x_off = -1 * edptr->display_x_offset;
-	x = x1 + (int)((float)x_off / dx);
+	if (x2 > x1) {
+		dx = (float)51200 / (float)(x2 - x1);
+		x_off = -1 * edptr->display_x_offset;
+		x = x1 + (int)((float)(x_off + 25600) / dx);
+		if (x < x1) x = x1;
+		if (x > x2) x = x2;
 
-	DrawScrollButton(hdc, x - 6, y1, DRAW_BUTTON_ON);
+		DrawScrollButton(hdc, x - 6, y1, DRAW_BUTTON_ON);
+	}
 
 	x1 = vscroll.x1, y1 = vscroll.y1 + 13 + 6;
 	x2 = vscroll.x2, y2 = vscroll.y2 - 13 - 6;
 
-	dy = (float)51200 / (float)(y2 - y1);
-	y_off = -1 * edptr->display_y_offset;
-	y = y1 + (int)((float)y_off / dy);
+	if (y2 > y1) {
+		dy = (float)51200 / (float)(y2 - y1);
+		y_off = -1 * edptr->display_y_offset;
+		y = y1 + (int)((float)(y_off + 25600) / dy);
+		if (y < y1) y = y1;
+		if (y > y2) y = y2;
 
-	DrawScrollButton(hdc, x1, y - 6, DRAW_BUTTON_ON);
+		DrawScrollButton(hdc, x1, y - 6, DRAW_BUTTON_ON);
+	}
 
 	DrawScrollButton(hdc, hscroll.x1, hscroll.y1, LEFT_BUTTON_DOWN);
 	DrawScrollButton(hdc, hscroll.x2 - 12, hscroll.y1, LEFT_BUTTON_DOWN);
@@ -267,9 +275,9 @@ int UpdateScrollBars(HDC hdc, int x, int y, int button_status, editor_ptr edptr)
 	x1 = hscroll.x1 + 13 + 6, y1 = hscroll.y1;
 	x2 = hscroll.x2 - 13 - 6, y2 = hscroll.y2;
 
-	if ((x >= x1 && x <= x2) && (y >= y1 && y <= y2)) {
+	if ((x >= x1 && x <= x2) && (y >= y1 && y <= y2) && (x2 > x1)) {
 		dx = (float)51200 / (float)(x2 - x1);
-		x_off = (int)((float)(x - x1) * dx);
+		x_off = (int)((float)(x - x1) * dx - (float)25600);
 		edptr->display_x_offset = -1 * x_off;
 		if (x_old > 0)
 			DrawScrollButton(hdc, x_old, y1, ERASE_BUTTON);
@@ -283,9 +291,9 @@ int UpdateScrollBars(HDC hdc, int x, int y, int button_status, editor_ptr edptr)
 	x1 = vscroll.x1, y1 = vscroll.y1 + 13 + 6;
 	x2 = vscroll.x2, y2 = vscroll.y2 - 13 - 6;
 
-	if ((x >= x1 && x <= x2) && (y >= y1 && y <= y2)) {
+	if ((x >= x1 && x <= x2) && (y >= y1 && y <= y2) && (y2 > y1)) {
 		dy = (float)51200 / (float)(y2 - y1);
-		y_off = (int)((float)(y - y1) * dy);
+		y_off = (int)((float)(y - y1) * dy - (float)25600);
 		edptr->display_y_offset = -1 * y_off;
 		if (y_old > 0)
 			DrawScrollButton(hdc, x1, y_old, ERASE_BUTTON);
@@ -340,15 +348,13 @@ int UpdateStatusBar(HDC hdc, int x, int y, editor_ptr edptr) {
 	SetBkMode(hdc, OPAQUE);
 	s = edptr->display_scale;
 
-	itoa((int)edptr->object_rot_angle, buffer, 10);
-	buffer2 = lstrcat(buffer, " deg");
+	snprintf(buffer, sizeof(buffer), "%d deg", (int)edptr->object_rot_angle);
 	TextOut(hdc, 220 + scale, displaysizez + 20, "              ", 14);
-	TextOut(hdc, 220 + scale, displaysizez + 20, buffer2, lstrlen(buffer2));
+	TextOut(hdc, 220 + scale, displaysizez + 20, buffer, lstrlen(buffer));
 
-	itoa((int)(s * 100), buffer, 10);
-	buffer2 = lstrcat(buffer, " %");
+	snprintf(buffer, sizeof(buffer), "%d %%", (int)(s * 100));
 	TextOut(hdc, 160 + scale, displaysizez + 20, "          ", 10);
-	TextOut(hdc, 160 + scale, displaysizez + 20, buffer2, lstrlen(buffer2));
+	TextOut(hdc, 160 + scale, displaysizez + 20, buffer, lstrlen(buffer));
 
 	// if (draw_mode==1)
 	//	TextOut(hdc,560+scale,displaysizez+20,"DRAW",10);
@@ -417,15 +423,16 @@ int UpdateEditorMapWindow(HWND hwnd, HDC hdc, int x, int y, int button_status, e
 			SetLinkWithMouse(MouseX, MouseY);
 			DrawEditorMap(hdc, edptr);
 			//	result = SetDlgItemText(hwnd,IDC_COMBOOBJECT,  "");
-			sprintf(junk, "ID:%d %s", LinksList[current_link].objectid,
+			snprintf(junk, sizeof(junk), "ID:%d %s", LinksList[current_link].objectid,
 			        edptr->wptr->oblist[LinksList[current_link].objectid].name);
 
-			strcpy(modeltrue, "");
-			strcat(junk, " ");
+			strncpy(modeltrue, "", sizeof(modeltrue) - 1);
+			modeltrue[sizeof(modeltrue) - 1] = '\0';
+			strncat(junk, " ", sizeof(junk) - strlen(junk) - 1);
 
 			if (strcmp(edptr->wptr->oblist[LinksList[current_link].objectid].name, "!monster1") == 0)
 				FindModel(edworld.oblist[LinksList[current_link].objectid].monsterid);
-			strcat(junk, modeltrue);
+			strncat(junk, modeltrue, sizeof(junk) - strlen(junk) - 1);
 			result = SetDlgItemText(hwnd, IDC_COMBOOBJECT, junk);
 
 			DrawEditorMap(hdc, edptr);
@@ -865,6 +872,7 @@ void PlaceObjectWithMouse(editor_ptr edptr, int x, int z) {
 	int i, dx, dz;
 	int result;
 	i = edptr->wptr->oblist_length;
+	if (i < 0 || i >= 10000) return;
 
 	dx = x / 20;
 	x = dx * 20;
@@ -885,7 +893,8 @@ void PlaceObjectWithMouse(editor_ptr edptr, int x, int z) {
 	edptr->wptr->oblist[i].monsterid = monsterid;
 	edptr->wptr->oblist[i].monstertexture = monstertexture;
 
-	strcpy(edptr->wptr->oblist[i].monstername, modelname1);
+	strncpy(edptr->wptr->oblist[i].monstername, modelname1, sizeof(edptr->wptr->oblist[i].monstername) - 1);
+	edptr->wptr->oblist[i].monstername[sizeof(edptr->wptr->oblist[i].monstername) - 1] = '\0';
 
 	//	montexid[i]=monstertexture;
 
@@ -900,10 +909,13 @@ void PlaceObjectWithMouse(editor_ptr edptr, int x, int z) {
 	edptr->wptr->oblist[i].ltype = ltype;
 	edptr->wptr->oblist[i].ability = ability;
 
-	strcpy(edptr->wptr->oblist[i].ctext, gctext);
+	strncpy(edptr->wptr->oblist[i].ctext, gctext, sizeof(edptr->wptr->oblist[i].ctext) - 1);
+	edptr->wptr->oblist[i].ctext[sizeof(edptr->wptr->oblist[i].ctext) - 1] = '\0';
 
-	strcpy(edptr->wptr->oblist[i].name, currentobjectname);
-	strcpy(edworld.oblist[i].name, currentobjectname);
+	strncpy(edptr->wptr->oblist[i].name, currentobjectname, sizeof(edptr->wptr->oblist[i].name) - 1);
+	edptr->wptr->oblist[i].name[sizeof(edptr->wptr->oblist[i].name) - 1] = '\0';
+	strncpy(edworld.oblist[i].name, currentobjectname, sizeof(edworld.oblist[i].name) - 1);
+	edworld.oblist[i].name[sizeof(edworld.oblist[i].name) - 1] = '\0';
 
 	last_x = x;
 	last_z = z;
@@ -960,37 +972,44 @@ void SetLinkWithMouse(int x, int z) {
 		// abba
 	}
 
-	ypos = ed.wptr->oblist[LinksList[current_link].objectid].y;
+	if (current_link < 0 || current_link >= MAX_NUM_LINKS) return;
+	int obj_id = LinksList[current_link].objectid;
+	if (obj_id < 0 || obj_id >= 10000) return;
+
+	ypos = ed.wptr->oblist[obj_id].y;
 
 	if (ed.editor_mode == 0) {
 
-		sprintf(junk, "%f", ypos);
+		snprintf(junk, sizeof(junk), "%f", ypos);
 
 		result = SetDlgItemText(gwin, IDC_EDIT1, junk);
 
 		NVALS.ypos = ypos;
 
-		texture = ed.wptr->oblist[LinksList[current_link].objectid].monstertexture;
+		texture = ed.wptr->oblist[obj_id].monstertexture;
 
-		sprintf(buf, "%s", ed.wptr->oblist[LinksList[current_link].objectid].ctext);
+		snprintf(buf, sizeof(buf), "%s", ed.wptr->oblist[obj_id].ctext);
 		result = SetDlgItemText(gwin, IDC_EDIT12, buf);
 
-		sprintf(buf, "%f", ed.wptr->oblist[LinksList[current_link].objectid].rot_angle);
+		snprintf(buf, sizeof(buf), "%f", ed.wptr->oblist[obj_id].rot_angle);
 		result = SetDlgItemText(gwin, IDC_OBJECT2, buf);
-		strcpy(NVALS.angle, buf);
+		strncpy(NVALS.angle, buf, sizeof(NVALS.angle) - 1);
+		NVALS.angle[sizeof(NVALS.angle) - 1] = '\0';
 
-		sprintf(buf, "%d", ed.wptr->oblist[LinksList[current_link].objectid].ability);
+		snprintf(buf, sizeof(buf), "%d", ed.wptr->oblist[obj_id].ability);
 		result = SetDlgItemText(gwin, IDC_EDIT13, buf);
-		strcpy(NVALS.param, buf);
+		strncpy(NVALS.param, buf, sizeof(NVALS.param) - 1);
+		NVALS.param[sizeof(NVALS.param) - 1] = '\0';
 
-		strcpy(NVALS.buf, buf);
+		strncpy(NVALS.buf, buf, sizeof(NVALS.buf) - 1);
+		NVALS.buf[sizeof(NVALS.buf) - 1] = '\0';
 
-		sprintf(junk, "%d", texture);
+		snprintf(junk, sizeof(junk), "%d", texture);
 
 		result = SetDlgItemText(gwin, IDC_EDIT5, junk);
 
 		NVALS.texture = texture;
-		NVALS.objectid = LinksList[current_link].objectid;
+		NVALS.objectid = obj_id;
 	}
 }
 
@@ -1023,6 +1042,8 @@ void AddLinkToList() {
 
 	int i = 0;
 	int oblist_length;
+
+	if (last_link < 0 || last_link >= MAX_NUM_LINKS) return;
 
 	oblist_length = ed.wptr->oblist_length;
 
@@ -1064,7 +1085,9 @@ void UndoLastLink(editor_ptr edptr) {
 	int num_links = 1;
 	int oblist_length;
 
+	if (edptr == NULL || edptr->wptr == NULL) return;
 	oblist_length = edptr->wptr->oblist_length;
+	if (oblist_length < 0 || oblist_length >= 10000) return;
 	obtype = edptr->wptr->oblist[oblist_length].type;
 
 	switch (obtype) {
@@ -1626,6 +1649,7 @@ void AddLeftCurve(HDC hdc, editor_ptr edptr) {
 
 	k = (float)0.017453292;
 	i = edptr->wptr->oblist_length;
+	if (i < 0 || i >= 10000) return;
 	edptr->wptr->oblist[i].x = LinksList[current_link].last_x;
 	edptr->wptr->oblist[i].y = (float)ylocation;
 	edptr->wptr->oblist[i].z = LinksList[current_link].last_z;
@@ -1635,8 +1659,10 @@ void AddLeftCurve(HDC hdc, editor_ptr edptr) {
 	edptr->wptr->oblist[i].inactive = 0;
 	angle = k * LinksList[current_link].last_angle;
 
-	strcpy(edptr->wptr->oblist[i].name, currentobjectname);
-	strcpy(edworld.oblist[i].name, currentobjectname);
+	strncpy(edptr->wptr->oblist[i].name, currentobjectname, sizeof(edptr->wptr->oblist[i].name) - 1);
+	edptr->wptr->oblist[i].name[sizeof(edptr->wptr->oblist[i].name) - 1] = '\0';
+	strncpy(edworld.oblist[i].name, currentobjectname, sizeof(edworld.oblist[i].name) - 1);
+	edworld.oblist[i].name[sizeof(edworld.oblist[i].name) - 1] = '\0';
 
 	x = edptr->wptr->obdata[OBJECT_ID_LEFTCURVE_ROAD].connection[0].x;
 	z = edptr->wptr->obdata[OBJECT_ID_LEFTCURVE_ROAD].connection[0].z;
@@ -1655,6 +1681,7 @@ void AddRightCurve(HDC hdc, editor_ptr edptr) {
 
 	k = (float)0.017453292;
 	i = edptr->wptr->oblist_length;
+	if (i < 0 || i >= 10000) return;
 	edptr->wptr->oblist[i].x = LinksList[current_link].last_x;
 	edptr->wptr->oblist[i].y = (float)ylocation;
 	edptr->wptr->oblist[i].z = LinksList[current_link].last_z;
@@ -1663,8 +1690,10 @@ void AddRightCurve(HDC hdc, editor_ptr edptr) {
 	edptr->wptr->oblist[i].light = -1;
 	edptr->wptr->oblist[i].inactive = 0;
 	angle = k * LinksList[current_link].last_angle;
-	strcpy(edptr->wptr->oblist[i].name, currentobjectname);
-	strcpy(edworld.oblist[i].name, currentobjectname);
+	strncpy(edptr->wptr->oblist[i].name, currentobjectname, sizeof(edptr->wptr->oblist[i].name) - 1);
+	edptr->wptr->oblist[i].name[sizeof(edptr->wptr->oblist[i].name) - 1] = '\0';
+	strncpy(edworld.oblist[i].name, currentobjectname, sizeof(edworld.oblist[i].name) - 1);
+	edworld.oblist[i].name[sizeof(edworld.oblist[i].name) - 1] = '\0';
 
 	x = edptr->wptr->obdata[OBJECT_ID_RIGHTCURVE_ROAD].connection[0].x;
 	z = edptr->wptr->obdata[OBJECT_ID_RIGHTCURVE_ROAD].connection[0].z;
@@ -1683,6 +1712,7 @@ void AddLeftCorner(HDC hdc, editor_ptr edptr) {
 
 	k = (float)0.017453292;
 	i = edptr->wptr->oblist_length;
+	if (i < 0 || i >= 10000) return;
 	edptr->wptr->oblist[i].x = LinksList[current_link].last_x;
 	edptr->wptr->oblist[i].y = (float)ylocation;
 	edptr->wptr->oblist[i].z = LinksList[current_link].last_z;
@@ -1700,8 +1730,10 @@ void AddLeftCorner(HDC hdc, editor_ptr edptr) {
 	z = edptr->wptr->obdata[OBJECT_ID_LEFTCORNER_ROAD].connection[0].z;
 	last_x += (x * (float)cos(angle) - z * (float)sin(angle));
 	last_z += (x * (float)sin(angle) + z * (float)cos(angle));
-	strcpy(edptr->wptr->oblist[i].name, currentobjectname);
-	strcpy(edworld.oblist[i].name, currentobjectname);
+	strncpy(edptr->wptr->oblist[i].name, currentobjectname, sizeof(edptr->wptr->oblist[i].name) - 1);
+	edptr->wptr->oblist[i].name[sizeof(edptr->wptr->oblist[i].name) - 1] = '\0';
+	strncpy(edworld.oblist[i].name, currentobjectname, sizeof(edworld.oblist[i].name) - 1);
+	edworld.oblist[i].name[sizeof(edworld.oblist[i].name) - 1] = '\0';
 
 	ReplaceLinkInList();
 
@@ -1715,6 +1747,7 @@ void AddRightCorner(HDC hdc, editor_ptr edptr) {
 
 	k = (float)0.017453292;
 	i = edptr->wptr->oblist_length;
+	if (i < 0 || i >= 10000) return;
 	edptr->wptr->oblist[i].x = LinksList[current_link].last_x;
 	edptr->wptr->oblist[i].y = (float)ylocation;
 	edptr->wptr->oblist[i].z = LinksList[current_link].last_z;
@@ -1731,8 +1764,10 @@ void AddRightCorner(HDC hdc, editor_ptr edptr) {
 	z = edptr->wptr->obdata[OBJECT_ID_RIGHTCORNER_ROAD].connection[0].z;
 	last_x += (x * (float)cos(angle) - z * (float)sin(angle));
 	last_z += (x * (float)sin(angle) + z * (float)cos(angle));
-	strcpy(edptr->wptr->oblist[i].name, currentobjectname);
-	strcpy(edworld.oblist[i].name, currentobjectname);
+	strncpy(edptr->wptr->oblist[i].name, currentobjectname, sizeof(edptr->wptr->oblist[i].name) - 1);
+	edptr->wptr->oblist[i].name[sizeof(edptr->wptr->oblist[i].name) - 1] = '\0';
+	strncpy(edworld.oblist[i].name, currentobjectname, sizeof(edworld.oblist[i].name) - 1);
+	edworld.oblist[i].name[sizeof(edworld.oblist[i].name) - 1] = '\0';
 
 	ReplaceLinkInList();
 
@@ -1746,6 +1781,7 @@ void AddZebra(HDC hdc, editor_ptr edptr) {
 
 	k = (float)0.017453292;
 	i = edptr->wptr->oblist_length;
+	if (i < 0 || i >= 10000) return;
 	edptr->wptr->oblist[i].x = LinksList[current_link].last_x;
 	edptr->wptr->oblist[i].y = (float)ylocation;
 	edptr->wptr->oblist[i].z = LinksList[current_link].last_z;
@@ -1754,8 +1790,10 @@ void AddZebra(HDC hdc, editor_ptr edptr) {
 	edptr->wptr->oblist[i].light = -1;
 	edptr->wptr->oblist[i].inactive = 0;
 	angle = k * LinksList[current_link].last_angle;
-	strcpy(edptr->wptr->oblist[i].name, currentobjectname);
-	strcpy(edworld.oblist[i].name, currentobjectname);
+	strncpy(edptr->wptr->oblist[i].name, currentobjectname, sizeof(edptr->wptr->oblist[i].name) - 1);
+	edptr->wptr->oblist[i].name[sizeof(edptr->wptr->oblist[i].name) - 1] = '\0';
+	strncpy(edworld.oblist[i].name, currentobjectname, sizeof(edworld.oblist[i].name) - 1);
+	edworld.oblist[i].name[sizeof(edworld.oblist[i].name) - 1] = '\0';
 
 	x = edptr->wptr->obdata[OBJECT_ID_ZEBRA].connection[0].x;
 	z = edptr->wptr->obdata[OBJECT_ID_ZEBRA].connection[0].z;
@@ -1810,8 +1848,10 @@ void AddStraight(HDC hdc, editor_ptr edptr) {
 	edptr->wptr->oblist[i].light = -1;
 	edptr->wptr->oblist[i].inactive = 0;
 
-	strcpy(edptr->wptr->oblist[i].name, currentobjectname);
-	strcpy(edworld.oblist[i].name, currentobjectname);
+	strncpy(edptr->wptr->oblist[i].name, currentobjectname, sizeof(edptr->wptr->oblist[i].name) - 1);
+	edptr->wptr->oblist[i].name[sizeof(edptr->wptr->oblist[i].name) - 1] = '\0';
+	strncpy(edworld.oblist[i].name, currentobjectname, sizeof(edworld.oblist[i].name) - 1);
+	edworld.oblist[i].name[sizeof(edworld.oblist[i].name) - 1] = '\0';
 
 	x = edptr->wptr->obdata[OBJECT_ID_STRAIGHT_ROAD].connection[0].x;
 	z = edptr->wptr->obdata[OBJECT_ID_STRAIGHT_ROAD].connection[0].z;
@@ -1830,6 +1870,7 @@ void AddSmallStraight(HDC hdc, editor_ptr edptr) {
 
 	k = (float)0.017453292;
 	i = edptr->wptr->oblist_length;
+	if (i < 0 || i >= 10000) return;
 	edptr->wptr->oblist[i].x = LinksList[current_link].last_x;
 	edptr->wptr->oblist[i].y = (float)ylocation;
 	edptr->wptr->oblist[i].z = LinksList[current_link].last_z;
@@ -1839,8 +1880,10 @@ void AddSmallStraight(HDC hdc, editor_ptr edptr) {
 	edptr->wptr->oblist[i].inactive = 0;
 	angle = k * LinksList[current_link].last_angle;
 
-	strcpy(edptr->wptr->oblist[i].name, currentobjectname);
-	strcpy(edworld.oblist[i].name, currentobjectname);
+	strncpy(edptr->wptr->oblist[i].name, currentobjectname, sizeof(edptr->wptr->oblist[i].name) - 1);
+	edptr->wptr->oblist[i].name[sizeof(edptr->wptr->oblist[i].name) - 1] = '\0';
+	strncpy(edworld.oblist[i].name, currentobjectname, sizeof(edworld.oblist[i].name) - 1);
+	edworld.oblist[i].name[sizeof(edworld.oblist[i].name) - 1] = '\0';
 
 	x = edptr->wptr->obdata[OBJECT_ID_SMALL_STRAIGHT_ROAD].connection[0].x;
 	z = edptr->wptr->obdata[OBJECT_ID_SMALL_STRAIGHT_ROAD].connection[0].z;
@@ -1881,8 +1924,10 @@ void AddTJunction(HDC hdc, editor_ptr edptr) {
 	ReplaceLinkInList();
 	current_link = last_link;
 
-	strcpy(edptr->wptr->oblist[i].name, currentobjectname);
-	strcpy(edworld.oblist[i].name, currentobjectname);
+	strncpy(edptr->wptr->oblist[i].name, currentobjectname, sizeof(edptr->wptr->oblist[i].name) - 1);
+	edptr->wptr->oblist[i].name[sizeof(edptr->wptr->oblist[i].name) - 1] = '\0';
+	strncpy(edworld.oblist[i].name, currentobjectname, sizeof(edworld.oblist[i].name) - 1);
+	edworld.oblist[i].name[sizeof(edworld.oblist[i].name) - 1] = '\0';
 
 	last_angle = deg_angle + 90;
 	CheckAngle();
@@ -1907,6 +1952,7 @@ void AddLeftTJunction(HDC hdc, editor_ptr edptr) {
 
 	k = (float)0.017453292;
 	i = edptr->wptr->oblist_length;
+	if (i < 0 || i >= 10000) return;
 	edptr->wptr->oblist[i].x = LinksList[current_link].last_x;
 	edptr->wptr->oblist[i].y = (float)ylocation;
 	edptr->wptr->oblist[i].z = LinksList[current_link].last_z;
@@ -1929,8 +1975,10 @@ void AddLeftTJunction(HDC hdc, editor_ptr edptr) {
 	ReplaceLinkInList();
 	current_link = last_link;
 
-	strcpy(edptr->wptr->oblist[i].name, currentobjectname);
-	strcpy(edworld.oblist[i].name, currentobjectname);
+	strncpy(edptr->wptr->oblist[i].name, currentobjectname, sizeof(edptr->wptr->oblist[i].name) - 1);
+	edptr->wptr->oblist[i].name[sizeof(edptr->wptr->oblist[i].name) - 1] = '\0';
+	strncpy(edworld.oblist[i].name, currentobjectname, sizeof(edworld.oblist[i].name) - 1);
+	edworld.oblist[i].name[sizeof(edworld.oblist[i].name) - 1] = '\0';
 
 	last_angle = deg_angle + 90;
 	CheckAngle();
@@ -1955,6 +2003,7 @@ void AddRightTJunction(HDC hdc, editor_ptr edptr) {
 
 	k = (float)0.017453292;
 	i = edptr->wptr->oblist_length;
+	if (i < 0 || i >= 10000) return;
 	edptr->wptr->oblist[i].x = LinksList[current_link].last_x;
 	edptr->wptr->oblist[i].y = (float)ylocation;
 	edptr->wptr->oblist[i].z = LinksList[current_link].last_z;
@@ -1968,8 +2017,10 @@ void AddRightTJunction(HDC hdc, editor_ptr edptr) {
 	rad_angle = k * LinksList[current_link].last_angle;
 	deg_angle = LinksList[current_link].last_angle;
 
-	strcpy(edptr->wptr->oblist[i].name, currentobjectname);
-	strcpy(edworld.oblist[i].name, currentobjectname);
+	strncpy(edptr->wptr->oblist[i].name, currentobjectname, sizeof(edptr->wptr->oblist[i].name) - 1);
+	edptr->wptr->oblist[i].name[sizeof(edptr->wptr->oblist[i].name) - 1] = '\0';
+	strncpy(edworld.oblist[i].name, currentobjectname, sizeof(edworld.oblist[i].name) - 1);
+	edworld.oblist[i].name[sizeof(edworld.oblist[i].name) - 1] = '\0';
 
 	last_angle = deg_angle + 0;
 	CheckAngle();
@@ -2003,6 +2054,7 @@ void AddCrossRoad(HDC hdc, editor_ptr edptr) {
 
 	k = (float)0.017453292;
 	i = edptr->wptr->oblist_length;
+	if (i < 0 || i >= 10000) return;
 	edptr->wptr->oblist[i].x = LinksList[current_link].last_x;
 	edptr->wptr->oblist[i].y = (float)ylocation;
 	edptr->wptr->oblist[i].z = LinksList[current_link].last_z;
@@ -2012,8 +2064,10 @@ void AddCrossRoad(HDC hdc, editor_ptr edptr) {
 	edptr->wptr->oblist[i].inactive = 0;
 	start_x = LinksList[current_link].last_x;
 	start_z = LinksList[current_link].last_z;
-	strcpy(edptr->wptr->oblist[i].name, currentobjectname);
-	strcpy(edworld.oblist[i].name, currentobjectname);
+	strncpy(edptr->wptr->oblist[i].name, currentobjectname, sizeof(edptr->wptr->oblist[i].name) - 1);
+	edptr->wptr->oblist[i].name[sizeof(edptr->wptr->oblist[i].name) - 1] = '\0';
+	strncpy(edworld.oblist[i].name, currentobjectname, sizeof(edworld.oblist[i].name) - 1);
+	edworld.oblist[i].name[sizeof(edworld.oblist[i].name) - 1] = '\0';
 
 	rad_angle = k * LinksList[current_link].last_angle;
 	deg_angle = LinksList[current_link].last_angle;
@@ -2096,32 +2150,20 @@ int LoadMapInEditor(HWND hwnd, char *filename, world_ptr wptr) {
 	}
 
 	while (done == 0) {
-		fscanf(fp, "%s", &s);
+		if (fscanf(fp, "%80s", s) != 1) break;
 
 		if (strcmp(s, "OBJECT") == 0) {
-			fscanf(fp, "%s", &p);
+			if (fscanf(fp, "%99s", p) != 1) break;
 
-			object_id = CheckObjectId((char *)&p);
-			sprintf(junk, "ID:%d %s", tobjectcount, p);
+			object_id = CheckObjectId(p);
+			snprintf(junk, sizeof(junk), "ID:%d %s", tobjectcount, p);
 
 			if (strcmp(p, "!monster1") != 0)
 				SendMessage(hwndObjects, CB_ADDSTRING, 0, (LPARAM)&junk);
 
-			// new line here
-
-			//			fscanf( fp, "%s", &p );
-			//			if (object_id==27 || object_id==25 ||object_id==26 || object_id==23) {
-
-			//			if (object_id==23 || object_id==35 || object_id==32 || object_id==33 || object_id==57) {
-
 			if (strstr(p, "!") != NULL) {
 				addanewplayer = 1;
-				// adplayer
 			}
-			//			if (strstr(p,"startpos")!=NULL) {
-			//				addanewstartpos=1;
-			//
-			//			}
 
 			if (strstr(p, "text") != NULL) {
 				addanewtext = 1;
@@ -2133,14 +2175,19 @@ int LoadMapInEditor(HWND hwnd, char *filename, world_ptr wptr) {
 
 			if (object_id == -1) {
 				MessageBox(hwnd, "Error Bad Object ID in: LoadMapInEditor", NULL, MB_OK);
+				fclose(fp);
 				return 1;
 			}
 
 			if (start_flag == FALSE)
 				object_count++;
+			if (object_count >= 10000) object_count = 9999;
+
 			wptr->oblist[object_count].type = object_id;
-			strcpy(wptr->oblist[object_count].name, p);
-			strcpy(edworld.oblist[object_count].name, p);
+			strncpy(wptr->oblist[object_count].name, p, sizeof(wptr->oblist[object_count].name) - 1);
+			wptr->oblist[object_count].name[sizeof(wptr->oblist[object_count].name) - 1] = '\0';
+			strncpy(edworld.oblist[object_count].name, p, sizeof(edworld.oblist[object_count].name) - 1);
+			edworld.oblist[object_count].name[sizeof(edworld.oblist[object_count].name) - 1] = '\0';
 			wptr->oblist[object_count].inactive = 0;
 			edworld.oblist[object_count].inactive = 0;
 			tobjectcount++;
@@ -2150,54 +2197,31 @@ int LoadMapInEditor(HWND hwnd, char *filename, world_ptr wptr) {
 		}
 
 		if (strcmp(s, "CO_ORDINATES") == 0) {
-			fscanf(fp, "%s", &p);
-			wptr->oblist[object_count].x = (float)atof(p);
-
-			fscanf(fp, "%s", &p);
-			wptr->oblist[object_count].y = (float)atof(p);
-
-			fscanf(fp, "%s", &p);
-			wptr->oblist[object_count].z = (float)atof(p);
+			if (fscanf(fp, "%99s", p) == 1) wptr->oblist[object_count].x = (float)atof(p);
+			if (fscanf(fp, "%99s", p) == 1) wptr->oblist[object_count].y = (float)atof(p);
+			if (fscanf(fp, "%99s", p) == 1) wptr->oblist[object_count].z = (float)atof(p);
 		}
 
 		if (strcmp(s, "ROT_ANGLE") == 0) {
 
 			if (addanewplayer == 1) {
 
-				//		fprintf( fp, "%d %d %d\n",(int)wptr->oblist[i].rot_angle,(int)wptr->oblist[i].monsterid, (int)wptr->oblist[i].monstertexture );
+				strncpy(strmonid, "", sizeof(strmonid));
+				strncpy(strmontex, "", sizeof(strmontex));
 
-				strcpy(strmonid, "");
-				strcpy(strmontex, "");
-
-				fscanf(fp, "%s %s %s %s %s", &p, &strmonid, &strmontex, &num, &ability);
-
-				//				fscanf( fp, "%s %s %s %s", &p, &strmonid,&strmontex,&num);
-				//				fgets( bigbuf,100,fp );
-
-				//				bufc2=0;
-
-				//				for (loop1=1;loop1<strlen(bigbuf);loop1++){
-
-				//						if (bigbuf[loop1]!=13 &&  bigbuf[loop1]!=10)
-				//						bigbuf2[bufc2++]=bigbuf[loop1];
-
-				//				}
-				//
-				//				bigbuf2[bufc2] ='\0';
+				if (fscanf(fp, "%99s %249s %249s %254s %254s", p, strmonid, strmontex, num, ability) < 5) {}
 
 				if (strlen(strmonid) == 0) {
-					strcpy(strmonid, "0");
+					strncpy(strmonid, "0", sizeof(strmonid) - 1);
 				}
 				if (strlen(strmontex) == 0) {
-					strcpy(strmontex, "27");
+					strncpy(strmontex, "27", sizeof(strmontex) - 1);
 				}
-				//				mid = (int) atof(strmonid);
 
-				//				mtex= (int) atof(strmontex);
 				mid = (int)FindModelID(strmonid);
 
-				strcat(junk, " ");
-				strcat(junk, strmonid);
+				strncat(junk, " ", sizeof(junk) - strlen(junk) - 1);
+				strncat(junk, strmonid, sizeof(junk) - strlen(junk) - 1);
 				SendMessage(hwndObjects, CB_ADDSTRING, 0, (LPARAM)&junk);
 
 				if (strcmp(strmontex, "0") == 0)
@@ -2215,7 +2239,7 @@ int LoadMapInEditor(HWND hwnd, char *filename, world_ptr wptr) {
 				wptr->oblist[object_count].ability = (float)atof(ability);
 				;
 
-				strcpy(wptr->oblist[object_count].ctext, "");
+				strncpy(wptr->oblist[object_count].ctext, "", sizeof(wptr->oblist[object_count].ctext));
 
 				addanewplayer = 0;
 
@@ -2223,18 +2247,21 @@ int LoadMapInEditor(HWND hwnd, char *filename, world_ptr wptr) {
 
 				if (addanewtext == 1) {
 
-					fscanf(fp, "%s", &ability); // type
+					if (fscanf(fp, "%254s", ability) < 1) {} // type
 
 					fgets(bigbuf, 2048, fp);
 					bufc2 = 0;
-					for (loop1 = 1; loop1 < strlen(bigbuf); loop1++) {
+					for (loop1 = 1; loop1 < (int)strlen(bigbuf); loop1++) {
 
-						if (bigbuf[loop1] != 13 && bigbuf[loop1] != 10)
-							bigbuf2[bufc2++] = bigbuf[loop1];
+						if (bigbuf[loop1] != 13 && bigbuf[loop1] != 10) {
+							if (bufc2 < (int)sizeof(bigbuf2) - 1)
+								bigbuf2[bufc2++] = bigbuf[loop1];
+						}
 					}
 
 					bigbuf2[bufc2] = '\0';
-					strcpy(wptr->oblist[object_count].ctext, bigbuf2);
+					strncpy(wptr->oblist[object_count].ctext, bigbuf2, sizeof(wptr->oblist[object_count].ctext) - 1);
+					wptr->oblist[object_count].ctext[sizeof(wptr->oblist[object_count].ctext) - 1] = '\0';
 
 					addanewtext = 0;
 				} else {
@@ -2398,21 +2425,23 @@ int LoadMapTextures(char *filename) {
 		if (strcmp(s, "ROT_ANGLE") == 0) {
 
 			if (addanewplayer == 1) {
-				strcpy(strmonid, "");
-				strcpy(strmontex, "");
+				strncpy(strmonid, "", sizeof(strmonid));
+				strncpy(strmontex, "", sizeof(strmontex));
 
-				fscanf(fp, "%s %s %s", &p, &strmonid, &strmontex);
+				if (fscanf(fp, "%99s %249s %249s", p, strmonid, strmontex) < 3) {}
 
 				if (strlen(strmonid) == 0) {
-					strcpy(strmonid, "0");
+					strncpy(strmonid, "0", sizeof(strmonid) - 1);
 				}
 				if (strlen(strmontex) == 0) {
-					strcpy(strmontex, "27");
+					strncpy(strmontex, "27", sizeof(strmontex) - 1);
 				}
 				mid = (int)atof(strmonid);
 				mtex = (int)atof(strmontex);
 
-				montexid[object_count] = FindTextureID(strmontex);
+				if (object_count >= 0 && object_count < 10000) {
+					montexid[object_count] = FindTextureID(strmontex);
+				}
 
 				addanewplayer = 0;
 
@@ -2557,7 +2586,8 @@ int SaveMap(HWND hwnd, char *filename, world_ptr wptr) {
 		if (wptr->oblist[i].inactive == 0) {
 
 			obtype = wptr->oblist[i].type;
-			strcpy(object_string, wptr->oblist[i].name);
+			strncpy(object_string, wptr->oblist[i].name, sizeof(object_string) - 1);
+			object_string[sizeof(object_string) - 1] = '\0';
 
 			fprintf(fp, "%s", "OBJECT ");
 
@@ -2565,13 +2595,13 @@ int SaveMap(HWND hwnd, char *filename, world_ptr wptr) {
 				fprintf(fp, "%s\n", object_string);
 			else {
 				MessageBox(hwnd, "Bad object ID Error in: SaveMap", NULL, MB_OK);
+				fclose(fp);
 				return 1;
 			}
 			fprintf(fp, "%s", "CO_ORDINATES ");
 			fprintf(fp, "%f%s", wptr->oblist[i].x, " ");
 			fprintf(fp, "%f%s", wptr->oblist[i].y, " ");
 			ypos = wptr->oblist[i].y;
-			//		fprintf( fp, "%f%s",(float)0," " );
 			fprintf(fp, "%f%s\n", wptr->oblist[i].z, " ");
 
 			fprintf(fp, "%s", "ROT_ANGLE ");
@@ -2581,9 +2611,7 @@ int SaveMap(HWND hwnd, char *filename, world_ptr wptr) {
 				FindModel(edworld.oblist[i].monsterid);
 
 				if (edworld.oblist[i].monstertexture <= 0) {
-					sprintf(texturetrue, "%d", edworld.oblist[i].monstertexture);
-					//			strcpy(modeltrue,"0");
-
+					snprintf(texturetrue, sizeof(texturetrue), "%d", edworld.oblist[i].monstertexture);
 				} else {
 					FindTexture(edworld.oblist[i].monstertexture);
 				}
@@ -2641,7 +2669,7 @@ int SaveMap(HWND hwnd, char *filename, world_ptr wptr) {
 					h1 = (float)wptr->oblist[i].gcolour;
 					i1 = (float)wptr->oblist[i].bcolour;
 
-					sprintf(buf, "LIGHT_SOURCE Spotlight POS %f %f %f DIR %f %f %f COLOUR %f %f %f\n",
+					snprintf(buf, sizeof(buf), "LIGHT_SOURCE Spotlight POS %f %f %f DIR %f %f %f COLOUR %f %f %f\n",
 					        a1, b1, c1, d1, e1, f1, g1, h1, i1);
 					fprintf(fp, "LIGHT_SOURCE Spotlight POS %f %f %f DIR %f %f %f COLOUR %f %f %f\n",
 					        wptr->oblist[i].x,
@@ -2735,7 +2763,8 @@ void FindModel(int id) {
 	for (i = 0; i < modelcount; i++) {
 
 		if (id == modelname[i].num) {
-			strcpy(modeltrue, modelname[i].name);
+			strncpy(modeltrue, modelname[i].name, sizeof(modeltrue) - 1);
+			modeltrue[sizeof(modeltrue) - 1] = '\0';
 		}
 	}
 }
@@ -2746,7 +2775,8 @@ void FindTexture(int id) {
 	for (i = 0; i < texturenumbercount; i++) {
 
 		if (id == texturenumber[i]) {
-			strcpy(texturetrue, tname[i].texname);
+			strncpy(texturetrue, tname[i].texname, sizeof(texturetrue) - 1);
+			texturetrue[sizeof(texturetrue) - 1] = '\0';
 		}
 	}
 }

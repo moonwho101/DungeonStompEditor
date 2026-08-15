@@ -588,7 +588,8 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		ability = atoi(ybuffer);
 
 		result = GetDlgItemText(hwnd, IDC_EDIT12, &ybuffer[0], 50);
-		strcpy(gctext, ybuffer);
+		strncpy(gctext, ybuffer, sizeof(gctext) - 1);
+		gctext[sizeof(gctext) - 1] = '\0';
 
 		// extern "C"	float rcolour;
 		// extern "C"	float gcolour;
@@ -603,16 +604,17 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		for (i = 0; i < objectnumbercount; i++) {
 			if (strstr(buff, oname[i].objectname[0]) != NULL) {
 
-				strcpy(currentobjectname, buff);
+				strncpy(currentobjectname, buff, sizeof(currentobjectname) - 1);
+				currentobjectname[sizeof(currentobjectname) - 1] = '\0';
 				currentobject = objectnumber[i];
 				ed.current_object_id = currentobject;
-				sprintf(junk, "%d", ed.current_object_id);
+				snprintf(junk, sizeof(junk), "%d", ed.current_object_id);
 				result = SetDlgItemText(hwnd, IDC_OBJECT, junk);
 			}
 		}
 
 		char buff[200];
-		sprintf(buff, "%d", ed.current_object_id);
+		snprintf(buff, sizeof(buff), "%d", ed.current_object_id);
 
 		if (truemode != 1)
 			result = SetDlgItemText(hwnd, IDC_OBJECT, buff);
@@ -633,13 +635,13 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			if (strstr(buff, tname[i].texname[0]) != NULL) {
 				currenttexture = texturenumber[i];
 				//							ed.current_object_id=currentobject;
-				sprintf(junk, "%d", currenttexture);
+				snprintf(junk, sizeof(junk), "%d", currenttexture);
 
 				result = SetDlgItemText(hwnd, IDC_EDIT5, junk);
 			}
 		}
 
-		sprintf(buff, "%d", currenttexture);
+		snprintf(buff, sizeof(buff), "%d", currenttexture);
 
 		if (currenttexture == 0 || currenttexture == -1) {
 		} else {
@@ -653,8 +655,7 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		result = GetDlgItemText(hwnd, IDC_COMBO3, &buff[0], 50);
 
 		if (strlen(buff) > 0) {
-			sprintf(junk, "%d", FindModelID(buff));
-			//				if (truemode != 1)
+			snprintf(junk, sizeof(junk), "%d", FindModelID(buff));
 			result = SetDlgItemText(hwnd, IDC_EDIT4, junk);
 		}
 
@@ -703,40 +704,46 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 				DrawEditorMap(hdc, &ed);
 				// result = SetDlgItemText(hwnd,IDC_EDIT4,  junk);
 
-				ypos = ed.wptr->oblist[LinksList[current_link].objectid].y;
+				int current_obj_id = LinksList[current_link].objectid;
+				if (current_obj_id >= 0 && current_obj_id < 10000) {
+					ypos = ed.wptr->oblist[current_obj_id].y;
 
-				sprintf(junk, "%f", ypos);
+					snprintf(junk, sizeof(junk), "%f", ypos);
 
-				if (truemode != 1)
-					result = SetDlgItemText(hwnd, IDC_EDIT1, junk);
-				NVALS.ypos = ypos;
+					if (truemode != 1)
+						result = SetDlgItemText(hwnd, IDC_EDIT1, junk);
+					NVALS.ypos = ypos;
 
-				char buf[2048];
-				sprintf(buf, "%s", ed.wptr->oblist[LinksList[current_link].objectid].ctext);
+					char buf[2048];
+					snprintf(buf, sizeof(buf), "%s", ed.wptr->oblist[current_obj_id].ctext);
 
-				if (truemode != 1)
-					result = SetDlgItemText(hwnd, IDC_EDIT12, buf);
-				strcpy(NVALS.buf, buf);
+					if (truemode != 1)
+						result = SetDlgItemText(hwnd, IDC_EDIT12, buf);
+					strncpy(NVALS.buf, buf, sizeof(NVALS.buf) - 1);
+					NVALS.buf[sizeof(NVALS.buf) - 1] = '\0';
 
-				texture = ed.wptr->oblist[LinksList[current_link].objectid].monstertexture;
+					texture = ed.wptr->oblist[current_obj_id].monstertexture;
 
-				sprintf(junk, "%d", texture);
-				if (truemode != 1)
-					result = SetDlgItemText(hwnd, IDC_EDIT5, junk);
+					snprintf(junk, sizeof(junk), "%d", texture);
+					if (truemode != 1)
+						result = SetDlgItemText(hwnd, IDC_EDIT5, junk);
 
-				NVALS.texture = texture;
-				NVALS.objectid = LinksList[current_link].objectid;
+					NVALS.texture = texture;
+					NVALS.objectid = current_obj_id;
 
-				sprintf(buf, "%f", ed.wptr->oblist[LinksList[current_link].objectid].rot_angle);
-				strcpy(NVALS.angle, buf);
+					snprintf(buf, sizeof(buf), "%f", ed.wptr->oblist[current_obj_id].rot_angle);
+					strncpy(NVALS.angle, buf, sizeof(NVALS.angle) - 1);
+					NVALS.angle[sizeof(NVALS.angle) - 1] = '\0';
 
-				if (truemode != 1)
-					result = SetDlgItemText(hwnd, IDC_OBJECT2, buf);
+					if (truemode != 1)
+						result = SetDlgItemText(hwnd, IDC_OBJECT2, buf);
 
-				sprintf(buf, "%d", ed.wptr->oblist[LinksList[current_link].objectid].ability);
-				if (truemode != 1)
-					result = SetDlgItemText(hwnd, IDC_EDIT13, buf);
-				strcpy(NVALS.param, buf);
+					snprintf(buf, sizeof(buf), "%d", ed.wptr->oblist[current_obj_id].ability);
+					if (truemode != 1)
+						result = SetDlgItemText(hwnd, IDC_EDIT13, buf);
+					strncpy(NVALS.param, buf, sizeof(NVALS.param) - 1);
+					NVALS.param[sizeof(NVALS.param) - 1] = '\0';
+				}
 			}
 		}
 		drawcross = current_link;
@@ -799,39 +806,47 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		DrawScrollBars(hdc, &ed);
 		UpdateStatusBar(hdc, 0, 0, &ed);
 
-		ypos = ed.wptr->oblist[LinksList[current_link].objectid].y;
+		{
+			int current_obj_id = LinksList[current_link].objectid;
+			if (current_obj_id >= 0 && current_obj_id < 10000) {
+				ypos = ed.wptr->oblist[current_obj_id].y;
 
-		sprintf(junk, "%f", ypos);
-		if (truemode != 1)
-			result = SetDlgItemText(hwnd, IDC_EDIT1, junk);
+				snprintf(junk, sizeof(junk), "%f", ypos);
+				if (truemode != 1)
+					result = SetDlgItemText(hwnd, IDC_EDIT1, junk);
 
-		NVALS.ypos = ypos;
+				NVALS.ypos = ypos;
 
-		char buf[2048];
-		sprintf(buf, "%s", ed.wptr->oblist[LinksList[current_link].objectid].ctext);
+				char buf[2048];
+				snprintf(buf, sizeof(buf), "%s", ed.wptr->oblist[current_obj_id].ctext);
 
-		if (truemode != 1)
-			result = SetDlgItemText(hwnd, IDC_EDIT12, buf);
-		strcpy(NVALS.buf, buf);
+				if (truemode != 1)
+					result = SetDlgItemText(hwnd, IDC_EDIT12, buf);
+				strncpy(NVALS.buf, buf, sizeof(NVALS.buf) - 1);
+				NVALS.buf[sizeof(NVALS.buf) - 1] = '\0';
 
-		texture = ed.wptr->oblist[LinksList[current_link].objectid].monstertexture;
+				texture = ed.wptr->oblist[current_obj_id].monstertexture;
 
-		sprintf(junk, "%d", texture);
-		if (truemode != 1)
-			result = SetDlgItemText(hwnd, IDC_EDIT5, junk);
+				snprintf(junk, sizeof(junk), "%d", texture);
+				if (truemode != 1)
+					result = SetDlgItemText(hwnd, IDC_EDIT5, junk);
 
-		NVALS.texture = texture;
-		NVALS.objectid = LinksList[current_link].objectid;
+				NVALS.texture = texture;
+				NVALS.objectid = current_obj_id;
 
-		sprintf(buf, "%f", ed.wptr->oblist[LinksList[current_link].objectid].rot_angle);
-		if (truemode != 1)
-			result = SetDlgItemText(hwnd, IDC_OBJECT2, buf);
-		strcpy(NVALS.angle, buf);
+				snprintf(buf, sizeof(buf), "%f", ed.wptr->oblist[current_obj_id].rot_angle);
+				if (truemode != 1)
+					result = SetDlgItemText(hwnd, IDC_OBJECT2, buf);
+				strncpy(NVALS.angle, buf, sizeof(NVALS.angle) - 1);
+				NVALS.angle[sizeof(NVALS.angle) - 1] = '\0';
 
-		sprintf(buf, "%d", ed.wptr->oblist[LinksList[current_link].objectid].ability);
-		if (truemode != 1)
-			result = SetDlgItemText(hwnd, IDC_EDIT13, buf);
-		strcpy(NVALS.param, buf);
+				snprintf(buf, sizeof(buf), "%d", ed.wptr->oblist[current_obj_id].ability);
+				if (truemode != 1)
+					result = SetDlgItemText(hwnd, IDC_EDIT13, buf);
+				strncpy(NVALS.param, buf, sizeof(NVALS.param) - 1);
+				NVALS.param[sizeof(NVALS.param) - 1] = '\0';
+			}
+		}
 
 		break;
 
@@ -942,12 +957,14 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			int obid = 0;
 
 			if (button_number == 1) {
-				strcpy(currentobjectname, "left_curve_road");
+				strncpy(currentobjectname, "left_curve_road", sizeof(currentobjectname) - 1);
+				currentobjectname[sizeof(currentobjectname) - 1] = '\0';
 				obid = LEFT_HAND_CURVE;
 				DrawRoadSection(hdc, &ed, LEFT_HAND_CURVE);
 			}
 			if (button_number == 2) {
-				strcpy(currentobjectname, "right_curve_road");
+				strncpy(currentobjectname, "right_curve_road", sizeof(currentobjectname) - 1);
+				currentobjectname[sizeof(currentobjectname) - 1] = '\0';
 
 				obid = RIGHT_HAND_CURVE;
 				DrawRoadSection(hdc, &ed, RIGHT_HAND_CURVE);
@@ -956,53 +973,61 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			if (button_number == 3) {
 
 				obid = STRAIGHT;
-				strcpy(currentobjectname, "straight_road");
+				strncpy(currentobjectname, "straight_road", sizeof(currentobjectname) - 1);
+				currentobjectname[sizeof(currentobjectname) - 1] = '\0';
 				DrawRoadSection(hdc, &ed, STRAIGHT);
 			}
 			if (button_number == 4) {
 
 				obid = SMALL_STRAIGHT;
-				strcpy(currentobjectname, "small_straight_road");
+				strncpy(currentobjectname, "small_straight_road", sizeof(currentobjectname) - 1);
+				currentobjectname[sizeof(currentobjectname) - 1] = '\0';
 				DrawRoadSection(hdc, &ed, SMALL_STRAIGHT);
 			}
 
 			if (button_number == 5) {
 
 				obid = LEFT_CORNER;
-				strcpy(currentobjectname, "left_corner");
+				strncpy(currentobjectname, "left_corner", sizeof(currentobjectname) - 1);
+				currentobjectname[sizeof(currentobjectname) - 1] = '\0';
 				DrawRoadSection(hdc, &ed, LEFT_CORNER);
 			}
 			if (button_number == 6) {
 
 				obid = RIGHT_CORNER;
-				strcpy(currentobjectname, "right_corner");
+				strncpy(currentobjectname, "right_corner", sizeof(currentobjectname) - 1);
+				currentobjectname[sizeof(currentobjectname) - 1] = '\0';
 				DrawRoadSection(hdc, &ed, RIGHT_CORNER);
 			}
 
 			if (button_number == 7) {
 
 				obid = CROSSROAD;
-				strcpy(currentobjectname, "mainroad_crossroads");
+				strncpy(currentobjectname, "mainroad_crossroads", sizeof(currentobjectname) - 1);
+				currentobjectname[sizeof(currentobjectname) - 1] = '\0';
 				DrawRoadSection(hdc, &ed, CROSSROAD);
 			}
 			if (button_number == 8) {
 
 				obid = T_JUNCTION;
-				strcpy(currentobjectname, "t_junction");
+				strncpy(currentobjectname, "t_junction", sizeof(currentobjectname) - 1);
+				currentobjectname[sizeof(currentobjectname) - 1] = '\0';
 				DrawRoadSection(hdc, &ed, T_JUNCTION);
 			}
 
 			if (button_number == 9) {
 
 				obid = LEFT_T_JUNCTION;
-				strcpy(currentobjectname, "left_t_junction");
+				strncpy(currentobjectname, "left_t_junction", sizeof(currentobjectname) - 1);
+				currentobjectname[sizeof(currentobjectname) - 1] = '\0';
 				DrawRoadSection(hdc, &ed, LEFT_T_JUNCTION);
 			}
 
 			if (button_number == 10) {
 
 				obid = RIGHT_T_JUNCTION;
-				strcpy(currentobjectname, "right_t_junction");
+				strncpy(currentobjectname, "right_t_junction", sizeof(currentobjectname) - 1);
+				currentobjectname[sizeof(currentobjectname) - 1] = '\0';
 				DrawRoadSection(hdc, &ed, RIGHT_T_JUNCTION);
 			}
 
@@ -1195,7 +1220,7 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			}
 
 			char buff[200];
-			sprintf(buff, "%d", ed.current_object_id);
+			snprintf(buff, sizeof(buff), "%d", ed.current_object_id);
 			result = SetDlgItemText(hwnd, IDC_OBJECT, buff);
 			DrawDialogControls(hdc, &ed);
 		}
@@ -1289,9 +1314,12 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 			result = GetDlgItemText(hwnd, IDC_EDIT1, &ybuffer[0], 50);
 
-			ed.wptr->oblist[NVALS.objectid].y = atof(ybuffer);
-			result = GetDlgItemText(hwnd, IDC_EDIT12, NVALS.buf, 2048);
-			strcpy(ed.wptr->oblist[NVALS.objectid].ctext, NVALS.buf);
+			if (NVALS.objectid >= 0 && NVALS.objectid < 10000) {
+				ed.wptr->oblist[NVALS.objectid].y = atof(ybuffer);
+				result = GetDlgItemText(hwnd, IDC_EDIT12, NVALS.buf, 2048);
+				strncpy(ed.wptr->oblist[NVALS.objectid].ctext, NVALS.buf, sizeof(ed.wptr->oblist[NVALS.objectid].ctext) - 1);
+				ed.wptr->oblist[NVALS.objectid].ctext[sizeof(ed.wptr->oblist[NVALS.objectid].ctext) - 1] = '\0';
+			}
 			break;
 
 		case IDC_SCROLLBAR1:
@@ -1508,10 +1536,9 @@ BOOL FAR PASCAL AppAbout(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		GlobalMemoryStatus(&memStatus);
 
 		mem = (int)memStatus.dwMemoryLoad;
-		itoa(mem, buffer, 10);
-		buffer2 = lstrcat(buffer, " %");
+		snprintf(buffer, sizeof(buffer), "%d %%", mem);
 		TextOut(hdc, 10, 100, "System RAM in use :", 19);
-		TextOut(hdc, 200, 100, buffer2, strlen(buffer2));
+		TextOut(hdc, 200, 100, buffer, strlen(buffer));
 
 		// mem=(int)memStatus.dwAvailPhys;
 		// itoa(mem,buffer,10);
@@ -1811,9 +1838,9 @@ Msg(LPSTR fmt, ...) {
 	va_list va;
 
 	va_start(va, fmt);
-	wvsprintf(buff, fmt, va);
+	vsnprintf(buff, sizeof(buff) - 3, fmt, va);
 	va_end(va);
-	lstrcat(buff, "\r\n");
+	strncat(buff, "\r\n", sizeof(buff) - strlen(buff) - 1);
 	AppPause(TRUE);
 	if (d3dapp && d3dapp->bFullscreen)
 		SetWindowPos(myglobs.hWndMain, HWND_NOTOPMOST, 0, 0, 0, 0,
@@ -1842,10 +1869,11 @@ void gettrueobjectname(HWND hwnd) {
 	for (i = 0; i < objectnumbercount; i++) {
 		if (strstr(buff, oname[i].objectname[0]) != NULL) {
 
-			strcpy(currentobjectname, buff);
+			strncpy(currentobjectname, buff, sizeof(currentobjectname) - 1);
+			currentobjectname[sizeof(currentobjectname) - 1] = '\0';
 			currentobject = objectnumber[i];
 			ed.current_object_id = currentobject;
-			sprintf(junk, "%d", ed.current_object_id);
+			snprintf(junk, sizeof(junk), "%d", ed.current_object_id);
 			result = SetDlgItemText(hwnd, IDC_OBJECT, junk);
 		}
 	}

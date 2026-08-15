@@ -4,33 +4,30 @@
 D3DMATRIX IdentityMatrix(void) // initializes identity matrix
 {
 	D3DMATRIX ret;
-	for (int i = 0; i < 4; i++) {
-		for (int j = 0; j < 4; j++) {
-			ret(i, j) = (i == j) ? 1.0f : 0.0f;
-		}
-	}
+	memset(&ret, 0, sizeof(D3DMATRIX));
+	ret._11 = 1.0f;
+	ret._22 = 1.0f;
+	ret._33 = 1.0f;
+	ret._44 = 1.0f;
 	return ret;
 } // end of IdentityMatrix()
 
 D3DMATRIX ZeroMatrix(void) // initializes matrix to zero
 {
 	D3DMATRIX ret;
-	for (int i = 0; i < 4; i++) {
-		for (int j = 0; j < 4; j++) {
-			ret(i, j) = 0.0f;
-		}
-	}
+	memset(&ret, 0, sizeof(D3DMATRIX));
 	return ret;
 } // end of ZeroMatrix()
 
 D3DMATRIX MatrixMult(const D3DMATRIX a, const D3DMATRIX b) {
-	D3DMATRIX ret = ZeroMatrix(); // shown below
+	D3DMATRIX ret = ZeroMatrix();
 
 	for (int i = 0; i < 4; i++) {
 		for (int j = 0; j < 4; j++) {
-			for (int k = 0; k < 4; k++) {
-				ret(i, j) += a(k, j) * b(i, k);
-			}
+			ret(i, j) = a(i, 0) * b(0, j) +
+			            a(i, 1) * b(1, j) +
+			            a(i, 2) * b(2, j) +
+			            a(i, 3) * b(3, j);
 		}
 	}
 	return ret;
@@ -47,8 +44,8 @@ D3DMATRIX Translate(const float dx, const float dy, const float dz) {
 D3DMATRIX RotateX(const float rads) {
 	float cosine, sine;
 
-	cosine = cos(rads);
-	sine = sin(rads);
+	cosine = cosf(rads);
+	sine = sinf(rads);
 	D3DMATRIX ret = IdentityMatrix();
 	ret(1, 1) = cosine;
 	ret(2, 2) = cosine;
@@ -60,8 +57,8 @@ D3DMATRIX RotateX(const float rads) {
 D3DMATRIX RotateY(const float rads) {
 	float cosine, sine;
 
-	cosine = cos(rads);
-	sine = sin(rads);
+	cosine = cosf(rads);
+	sine = sinf(rads);
 	D3DMATRIX ret = IdentityMatrix();
 	ret(0, 0) = cosine;
 	ret(2, 2) = cosine;
@@ -74,8 +71,8 @@ D3DMATRIX RotateY(const float rads) {
 D3DMATRIX RotateZ(const float rads) {
 	float cosine, sine;
 
-	cosine = cos(rads);
-	sine = sin(rads);
+	cosine = cosf(rads);
+	sine = sinf(rads);
 	D3DMATRIX ret = IdentityMatrix();
 	ret(0, 0) = cosine;
 	ret(1, 1) = cosine;

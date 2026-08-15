@@ -105,30 +105,33 @@ int LoadObjectData(HWND hwnd, char *filename, world_ptr wptr) {
 	}
 
 	while (done == 0) {
-		fscanf(fp, "%s", &s);
+		if (fscanf(fp, "%80s", s) != 1) break;
 
 		if (strcmp(s, "OBJECT") == 0) {
-			fscanf(fp, "%s", &p);
-			//			object_count=atoi(p);
+			if (fscanf(fp, "%99s", p) != 1) break;
 
-			wptr->num_vert_per_object[object_count] = vert_count;
-			wptr->num_polys_per_object[object_count] = poly_count;
+			if (object_count >= 0 && object_count < 900) {
+				wptr->num_vert_per_object[object_count] = vert_count;
+				wptr->num_polys_per_object[object_count] = poly_count;
+			}
 			vert_count = 0;
 			poly_count = 0;
 			conn_cnt = 0;
-			// new line below
 
-			fscanf(fp, "%s", &junk);
+			if (fscanf(fp, "%99s", junk) != 1) break;
 
-			SendMessage(hwndList, CB_ADDSTRING, 0, (LPARAM)&junk);
+			SendMessage(hwndList, CB_ADDSTRING, 0, (LPARAM)junk);
 
-			objectnumber[objectnumbercount] = atoi(p);
-			strcpy(oname[objectnumbercount].objectname[0], junk);
-			objectnumbercount++;
+			if (objectnumbercount >= 0 && objectnumbercount < 100) {
+				objectnumber[objectnumbercount] = atoi(p);
+				strncpy(oname[objectnumbercount].objectname[0], junk, sizeof(oname[objectnumbercount].objectname[0]) - 1);
+				oname[objectnumbercount].objectname[0][sizeof(oname[objectnumbercount].objectname[0]) - 1] = '\0';
+				objectnumbercount++;
+			}
 
-			object_count = CheckObjectId((char *)&junk);
+			object_count = CheckObjectId(junk);
 
-			if (object_count = -1)
+			if (object_count == -1)
 				object_count = atoi(p);
 		}
 
@@ -395,9 +398,12 @@ int LoadWorld(HWND hwnd, char *filename, world_ptr wptr) {
 			}
 			if (start_flag == FALSE)
 				object_count++;
+			if (object_count < 0 || object_count >= 10000) object_count = 9999;
 			wptr->oblist[object_count].type = object_id;
-			strcpy(wptr->oblist[object_count].name, p);
-			strcpy(edworld.oblist[object_count].name, p);
+			strncpy(wptr->oblist[object_count].name, p, sizeof(wptr->oblist[object_count].name) - 1);
+			wptr->oblist[object_count].name[sizeof(wptr->oblist[object_count].name) - 1] = '\0';
+			strncpy(edworld.oblist[object_count].name, p, sizeof(edworld.oblist[object_count].name) - 1);
+			edworld.oblist[object_count].name[sizeof(edworld.oblist[object_count].name) - 1] = '\0';
 
 			if (object_id == 1) {
 				int zzz = 0;
@@ -595,7 +601,9 @@ int CheckObjectId(char *p) {
 	*/
 	char buff[255];
 	int i = 0;
-	strcpy(buff, p);
+	if (p == NULL) return 0;
+	strncpy(buff, p, sizeof(buff) - 1);
+	buff[sizeof(buff) - 1] = '\0';
 
 	for (i = 0; i < objectnumbercount; i++) {
 		if (strcmp(buff, oname[i].objectname[0]) == 0) {
@@ -1179,12 +1187,17 @@ BOOL LoadRRTextures(HWND hwnd, char *filename) {
 		}
 
 		if (strcmp(s, "Alias") == 0) {
-			fscanf(fp, "%s", &p);
-			texturenumber[texturenumbercount] = atoi(p);
+			if (fscanf(fp, "%99s", p) != 1) break;
+			if (texturenumbercount >= 0 && texturenumbercount < 100) {
+				texturenumber[texturenumbercount] = atoi(p);
+			}
 
-			fscanf(fp, "%s", &p);
-			strcpy(tname[texturenumbercount].texname[0], p);
-			texturenumbercount++;
+			if (fscanf(fp, "%99s", p) != 1) break;
+			if (texturenumbercount >= 0 && texturenumbercount < 100) {
+				strncpy(tname[texturenumbercount].texname[0], p, sizeof(tname[texturenumbercount].texname[0]) - 1);
+				tname[texturenumbercount].texname[0][sizeof(tname[texturenumbercount].texname[0]) - 1] = '\0';
+				texturenumbercount++;
+			}
 			SendMessage(hwndList, CB_ADDSTRING, 0, (LPARAM)&p);
 
 			fscanf(fp, "%s", &p);
@@ -1349,8 +1362,11 @@ BOOL LoadModels(HWND hwnd, char *filename) {
 			SendMessage(hwndList, CB_ADDSTRING, 0, (LPARAM)&p);
 			// speed
 
-			strcpy(modelname[modelcount].name, p);
-			modelname[modelcount++].num = model_id;
+			if (modelcount >= 0 && modelcount < 100) {
+				strncpy(modelname[modelcount].name, p, sizeof(modelname[modelcount].name) - 1);
+				modelname[modelcount].name[sizeof(modelname[modelcount].name) - 1] = '\0';
+				modelname[modelcount++].num = model_id;
+			}
 			fscanf(fp, "%s", &p); //
 
 			fscanf(fp, "%s", &p); //
@@ -1384,10 +1400,13 @@ BOOL LoadModels(HWND hwnd, char *filename) {
 
 			fscanf(fp, "%s", &p); // ignore comment scale
 
-			SendMessage(hwndList, CB_ADDSTRING, 0, (LPARAM)&p);
-			strcpy(modelname[modelcount].name, p);
-			modelname[modelcount++].num = model_id;
-			fscanf(fp, "%s", &p); // ignore comment scale
+			SendMessage(hwndList, CB_ADDSTRING, 0, (LPARAM)p);
+			if (modelcount >= 0 && modelcount < 100) {
+				strncpy(modelname[modelcount].name, p, sizeof(modelname[modelcount].name) - 1);
+				modelname[modelcount].name[sizeof(modelname[modelcount].name) - 1] = '\0';
+				modelname[modelcount++].num = model_id;
+			}
+			if (fscanf(fp, "%99s", p) != 1) {} // ignore comment scale
 
 			command_recognised = TRUE;
 		}

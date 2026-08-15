@@ -17,13 +17,8 @@
 #define LAMP_POSTS 64
 #define ALL 127
 
-static int view_angle;
-static float car_speed;
-
 typedef float trans_matrix[4][4];
 typedef float point_matrix[4];
-
-static point_matrix p;
 
 typedef struct Camera_typ {
 	float direction_x;
