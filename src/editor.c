@@ -2084,7 +2084,7 @@ int LoadMapInEditor(HWND hwnd, char *filename, world_ptr wptr) {
 	int tobjectcount = 0;
 	BOOL start_flag = TRUE;
 
-	//	last_link = 0;
+	last_link = 0;
 	current_link = 0;
 	hwndObjects = GetDlgItem(hwnd, IDC_COMBOOBJECT);
 	SendMessage(hwndObjects, CB_RESETCONTENT, 0, 0);
@@ -2139,6 +2139,10 @@ int LoadMapInEditor(HWND hwnd, char *filename, world_ptr wptr) {
 			if (start_flag == FALSE)
 				object_count++;
 			wptr->oblist[object_count].type = object_id;
+			strcpy(wptr->oblist[object_count].name, p);
+			strcpy(edworld.oblist[object_count].name, p);
+			wptr->oblist[object_count].inactive = 0;
+			edworld.oblist[object_count].inactive = 0;
 			tobjectcount++;
 
 			wptr->oblist[object_count].light = -1;
@@ -2323,12 +2327,18 @@ int LoadMapInEditor(HWND hwnd, char *filename, world_ptr wptr) {
 			fscanf(fp, "%s", &p);
 			LinksList[last_link].objectid = (float)atoi(p);
 
+			LinksList[last_link].inactive = 0;
+			LinksList[last_link].active_link_flag = TRUE;
+
 			last_link++;
 		}
 
 		if (strcmp(s, "END_FILE") == 0) {
 			fscanf(fp, "%s", &p);
-			wptr->oblist_length = object_count + 1;
+			if (start_flag == TRUE)
+				wptr->oblist_length = 0;
+			else
+				wptr->oblist_length = object_count + 1;
 			done = 1;
 		}
 	}
