@@ -23,7 +23,7 @@
 #include "d3dmain.h"
 // #include "sound.h"
 #include "editor.h"
-#include "toolbar.h"
+#include "Toolbar.h"
 #include "world.h"
 // #include "bitmap.h"
 #include <winbase.h>
@@ -469,28 +469,28 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	int i;
 	int foundit = 0;
 	RECT rc;
-	GetWindowRect(hwnd, &rc);
-	displaysizex = (rc.right - rc.left) - (int)150;
-	displaysizez = (rc.bottom - rc.top) - (int)100;
+	GetClientRect(hwnd, &rc);
+	displaysizex = rc.right - 150;
+	displaysizez = rc.bottom - 40;
 
-	displaysizex1 = rc.left;
-	displaysizez1 = rc.top;
+	displaysizex1 = 0;
+	displaysizez1 = 0;
 
-	wtx = rc.left;
-	wtxy = rc.top;
+	wtx = 0;
+	wtxy = 0;
 	wtz = rc.right;
 	wtzy = rc.bottom;
 
-	//	HRGN hrgn=CreateRectRgn(wtx,wtxy,wtz,wtzy);
-	//		SelectClipRgn(hdc,hrgn);
+	if (displaysizex < 200)
+		displaysizex = 200;
 
-	if (displaysizex < (int)10)
-		displaysizex = (int)10;
-
-	if (displaysizez < (int)10)
-		displaysizez = (int)10;
+	if (displaysizez < 200)
+		displaysizez = 200;
 
 	switch (msg) {
+
+	case WM_ERASEBKGND:
+		return TRUE;
 
 		//		case WM_GETTEXT:
 		//			int result;
@@ -775,13 +775,15 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 	case WM_LBUTTONDOWN:
 		SetTimer(hwnd, 3, 100, NULL);
+		SetCapture(hwnd);
 		old_xPos = xPos;
 		old_yPos = yPos;
 
-		UpdateEditorMapWindow(hwnd, hdc, xPos, yPos, LEFT_BUTTON_DOWN, &ed);
-		UpdateToolBar(hdc, xPos, yPos, LEFT_BUTTON_DOWN);
-
 		button_number = UpdateScrollBars(hdc, xPos, yPos, LEFT_BUTTON_DOWN, &ed);
+		if (!ed.scroll_bar_flag && xPos < displaysizex) {
+			UpdateEditorMapWindow(hwnd, hdc, xPos, yPos, LEFT_BUTTON_DOWN, &ed);
+		}
+		UpdateToolBar(hdc, xPos, yPos, LEFT_BUTTON_DOWN);
 		if (button_number == 1) {
 			ed.display_x_offset += 1000;
 			if (ed.display_x_offset > 51200) ed.display_x_offset = 51200;
@@ -846,6 +848,7 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
 	case WM_LBUTTONUP:
 		KillTimer(hwnd, 3);
+		ReleaseCapture();
 		ed.scroll_bar_flag = FALSE;
 
 		toolbar_button_number = UpdateToolBar(hdc, old_xPos, old_yPos, LEFT_BUTTON_UP);
@@ -901,6 +904,12 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			if (ed.display_scale > 4)
 				ed.display_scale = (float)4;
 
+			UpdateStatusBar(hdc, 0, 0, &ed);
+			DrawEditorMap(hdc, &ed);
+		}
+		if (toolbar_button_number == 14) // center dungeon
+		{
+			CenterDungeon(&ed);
 			UpdateStatusBar(hdc, 0, 0, &ed);
 			DrawEditorMap(hdc, &ed);
 		}
@@ -1393,6 +1402,11 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			if (ed.display_scale != 0)
 				ed.display_scale = ed.display_scale / 2;
 
+			DrawEditorMap(hdc, &ed);
+			break;
+
+		case ID_VIEW_CENTER:
+			CenterDungeon(&ed);
 			DrawEditorMap(hdc, &ed);
 			break;
 

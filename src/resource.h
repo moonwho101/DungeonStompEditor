@@ -78,6 +78,7 @@
 #define ID_EDIT_DELETE 40029
 #define ID_DELETE 40030
 #define ID_MODE_EDIT 40031
+#define ID_VIEW_CENTER 40032
 
 // Next default values for new objects
 //

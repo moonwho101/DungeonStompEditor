@@ -2036,6 +2036,7 @@ BEGIN
         MENUITEM "Update",                      ID_VIEW_UPDATE, GRAYED
         MENUITEM "Zoom In",                     ID_VIEW_ZOOM_IN
         MENUITEM "Zoom  Out",                   ID_VIEW_ZOOM_OUT
+        MENUITEM "Center Dungeon",              ID_VIEW_CENTER
     END
     POPUP "Edit"
     BEGIN
@@ -2100,7 +2101,7 @@ APPABOUT DIALOG DISCARDABLE  0, 0, 250, 148
 STYLE DS_MODALFRAME | DS_3DLOOK | WS_POPUP | WS_VISIBLE | WS_CAPTION | 
     WS_SYSMENU
 CAPTION "Info"
-FONT 8, "MS Sans Serif"
+FONT 8, "Segoe UI"
 BEGIN
     DEFPUSHBUTTON   "Exit",IDOK,215,134,35,14
     LTEXT           "Written by :  William Chin",IDC_STATIC,5,25,229,9
