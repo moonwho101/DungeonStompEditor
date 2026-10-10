@@ -83,6 +83,7 @@ void AddRightTJunction(HDC hdc, editor_ptr edptr);
 void AddZebra(HDC hdc, editor_ptr edptr);
 
 void CheckAngle();
+void CenterDungeon(editor_ptr edptr);
 
 #ifdef __cplusplus
 }

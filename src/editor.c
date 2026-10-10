@@ -7,7 +7,7 @@
 #include "editor.h"
 // #include "3Dengine.h"
 // #include "d3ddemo.h"
-#include "toolbar.h"
+#include "Toolbar.h"
 #include "world.h"
 
 #include "resource.h"
@@ -867,15 +867,12 @@ void DrawScrollButton(HDC hdc, int x, int y, int status) {
 /////////////////////////////////////////////////////////////////////////////
 
 void PlaceObjectWithMouse(editor_ptr edptr, int x, int z) {
-	int i, dx, dz;
+	int i;
 	int result;
 	i = edptr->wptr->oblist_length;
 
-	dx = x / 20;
-	x = dx * 20;
-
-	dz = z / 20;
-	z = dz * 20;
+	x = (int)floor((double)x / 20.0) * 20;
+	z = (int)floor((double)z / 20.0) * 20;
 
 	edptr->wptr->oblist[i].x = (float)x;
 	edptr->wptr->oblist[i].y = (float)ylocation;
@@ -924,7 +921,7 @@ void PlaceObjectWithMouse(editor_ptr edptr, int x, int z) {
 }
 
 void SetLinkWithMouse(int x, int z) {
-	int i, count;
+	int i, count = -1;
 	double dx, dz;
 	float dist;
 	float min_dist = (float)100000;
@@ -947,6 +944,11 @@ void SetLinkWithMouse(int x, int z) {
 		}
 	}
 
+	// Maximum click pick distance threshold (in world units) to prevent accidental far clicks
+	if (min_dist > 300.0f) {
+		count = -1;
+	}
+
 	if (GetAsyncKeyState(VK_UP) < 0) {
 
 		// if (placemode==1){
@@ -957,10 +959,14 @@ void SetLinkWithMouse(int x, int z) {
 		jumpnewspot = 1;
 
 	} else {
-		current_link = count;
-		last_x = LinksList[current_link].last_x;
-		last_z = LinksList[current_link].last_z;
-		last_angle = LinksList[current_link].last_angle;
+		if (count >= 0) {
+			current_link = count;
+		}
+		if (last_link > 0 && current_link < last_link) {
+			last_x = LinksList[current_link].last_x;
+			last_z = LinksList[current_link].last_z;
+			last_angle = LinksList[current_link].last_angle;
+		}
 
 		// abba
 	}
@@ -1192,12 +1198,16 @@ void Draw_2D_Map(HDC hdc, CAMERA cam) {
 }
 
 void DrawEditorMap(HDC hdc, editor_ptr edptr) {
+	HDC offDC;
+	HBITMAP offBmp, oldBmp;
+	RECT clientRc;
+	int width, height;
 	HRGN hrgn;
 	HPEN hpen_color, holdpen_color;
+	HBRUSH hbr_bg, holdbrush_bg;
 	int i, j, w, z, x;
-	int x_offset = 20;
 	int vert_cnt, lit_v, ob_vert_count, ob_type;
-	int poly, poly_cnt, pcount;
+	int poly, poly_cnt = 0, pcount = 0;
 	float lx, lz, k = (float)0.017453292;
 	float x_off, z_off, s;
 	float cross_x, cross_z;
@@ -1208,97 +1218,94 @@ void DrawEditorMap(HDC hdc, editor_ptr edptr) {
 	double ay;
 	int start_x, start_z;
 	int end_x, end_z;
-	int nIndex;
 
-	//	Rectangle(hdc,0,32,displaysizex,displaysizez);
-	//	hrgn=CreateRectRgn(0+1,32+1,displaysizex,displaysizez);
+	if (!gwin) return;
 
-	//	Rectangle(hdc,200,32,wtz,wtzy);
-	//	hrgn=CreateRectRgn(200,32,wtz,wtzy);
-	// Select_Pen_Color(hdc,GRAY);
+	GetClientRect(gwin, &clientRc);
+	width = clientRc.right - clientRc.left;
+	height = clientRc.bottom - clientRc.top;
 
-	//	hpen_color = CreatePen(PS_SOLID,1,RGB(0,0,0));
-	//	holdpen_color=SelectObject(hdc,hpen_color);
+	if (width <= 0 || height <= 0) return;
 
-	nIndex = COLOR_ACTIVEBORDER;
-	holdbrush_color = SelectObject(hdc, GetSysColorBrush(nIndex));
-	Rectangle(hdc, 200, 32, wtz, wtzy);
-	Delete_Brush_Color(hdc);
+	offDC = CreateCompatibleDC(hdc);
+	offBmp = CreateCompatibleBitmap(hdc, width, height);
+	oldBmp = (HBITMAP)SelectObject(offDC, offBmp);
 
-	hrgn = CreateRectRgn(200, 32, displaysizex, displaysizez);
+	// Modern dark sleek background for map canvas
+	hbr_bg = CreateSolidBrush(RGB(24, 28, 36));
+	FillRect(offDC, &clientRc, hbr_bg);
+	DeleteObject(hbr_bg);
 
-	//	HDC memDC;
-	// memDC=CreateCompatible(&hdc);
-	// memDC=FillRect(CRect(0,0,wtz,wtzy),memDC);
-
-	//	FillRect(hdc,Rectangle(0,0,wtz,wtzy),hpen_color);
-
-	SelectClipRgn(hdc, hrgn);
+	// Draw control panel background on right side
+	hbr_bg = GetSysColorBrush(COLOR_ACTIVEBORDER);
+	RECT panelRc = { displaysizex, 0, width, height };
+	FillRect(offDC, &panelRc, hbr_bg);
 
 	s = edptr->display_scale;
 	x_off = (float)edptr->display_x_offset;
 	z_off = (float)edptr->display_y_offset;
 
-	hpen_color = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
-	holdpen_color = SelectObject(hdc, hpen_color);
+	hrgn = CreateRectRgn(200, 32, displaysizex, displaysizez);
+	SelectClipRgn(offDC, hrgn);
 
-	start_x = (int)(-x_off) - 260;
-	end_x = (int)(((float)displaysizex / s) - x_off) + 260;
-	start_z = (int)(-z_off) - 260;
-	end_z = (int)(((float)(displaysizez - 32) / s) - z_off) + 260;
+	// Grid lines (subtle dark gray)
+	hpen_color = CreatePen(PS_SOLID, 1, RGB(45, 52, 65));
+	holdpen_color = (HPEN)SelectObject(offDC, hpen_color);
 
-	start_x = (start_x / 20) * 20;
-	start_z = (start_z / 20) * 20;
+	start_x = (int)floor((-x_off - 260.0f) / 20.0f) * 20;
+	end_x = (int)floor((((float)displaysizex / s) - x_off + 260.0f) / 20.0f) * 20;
+	start_z = (int)floor((-z_off - 260.0f) / 20.0f) * 20;
+	end_z = (int)floor((((float)(displaysizez - 32) / s) - z_off + 260.0f) / 20.0f) * 20;
 
-	if (s * 20 > 2) {
-		for (z = start_z; z < end_z; z += 20) {
+	if (s * 20.0f > 2.0f) {
+		for (z = start_z; z <= end_z; z += 20) {
 			sz = s * (z_off + (float)z);
-			MoveToEx(hdc, 0, 32 + (int)sz, NULL);
-			LineTo(hdc, displaysizex, 32 + (int)sz);
+			MoveToEx(offDC, 0, 32 + (int)sz, NULL);
+			LineTo(offDC, displaysizex, 32 + (int)sz);
 		}
 
-		for (x = start_x; x < end_x; x += 20) {
+		for (x = start_x; x <= end_x; x += 20) {
 			sx = s * (x_off + (float)x);
-			MoveToEx(hdc, (int)sx, 32, NULL);
-			LineTo(hdc, (int)sx, displaysizez);
+			MoveToEx(offDC, (int)sx, 32, NULL);
+			LineTo(offDC, (int)sx, displaysizez);
 		}
 	}
 
-	SelectObject(hdc, holdpen_color);
+	SelectObject(offDC, holdpen_color);
 	DeleteObject(hpen_color);
 
-	// cell lines
-
-	hpen_color = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
-	holdpen_color = SelectObject(hdc, hpen_color);
+	// Cell boundary lines (slate blue)
+	hpen_color = CreatePen(PS_SOLID, 1, RGB(65, 85, 120));
+	holdpen_color = (HPEN)SelectObject(offDC, hpen_color);
 
 	{
-		int cell_start_x = (start_x / 260) * 260 - 260;
-		int cell_start_z = (start_z / 260) * 260 - 260;
+		int cell_start_x = (int)floor((double)start_x / 260.0) * 260;
+		int cell_start_z = (int)floor((double)start_z / 260.0) * 260;
 
-		for (z = cell_start_z; z < end_z; z += 260) {
+		for (z = cell_start_z; z <= end_z; z += 260) {
 			sz = s * (z_off + (float)z);
-			MoveToEx(hdc, 0, 32 + (int)sz, NULL);
-			LineTo(hdc, displaysizex, 32 + (int)sz);
+			MoveToEx(offDC, 0, 32 + (int)sz, NULL);
+			LineTo(offDC, displaysizex, 32 + (int)sz);
 		}
 
-		for (x = cell_start_x; x < end_x; x += 260) {
+		for (x = cell_start_x; x <= end_x; x += 260) {
 			sx = s * (x_off + (float)x);
-			MoveToEx(hdc, (int)sx, 32, NULL);
-			LineTo(hdc, (int)sx, displaysizez);
+			MoveToEx(offDC, (int)sx, 32, NULL);
+			LineTo(offDC, (int)sx, displaysizez);
 		}
 	}
 
-	SelectObject(hdc, holdpen_color);
+	SelectObject(offDC, holdpen_color);
 	DeleteObject(hpen_color);
 
-	if (edptr->wptr == NULL)
-		return;
-	if (edptr->wptr->oblist_length != 0) {
-
-		// Draw all polys in map //////////////////////////////////////////////
+	// Draw Objects (cyan/bright blue vector lines)
+	if (edptr->wptr != NULL && edptr->wptr->oblist_length != 0) {
+		hpen_color = CreatePen(PS_SOLID, 1, RGB(70, 180, 240));
+		holdpen_color = (HPEN)SelectObject(offDC, hpen_color);
 
 		for (i = 0; i < edptr->wptr->oblist_length; i++) {
+			if (edptr->wptr->oblist[i].inactive != 0) continue;
+
 			wx = edptr->wptr->oblist[i].x;
 			wy = edptr->wptr->oblist[i].y;
 			wz = edptr->wptr->oblist[i].z;
@@ -1307,72 +1314,73 @@ void DrawEditorMap(HDC hdc, editor_ptr edptr) {
 			cosine = (float)cos(ay);
 			sine = (float)sin(ay);
 			ob_type = edptr->wptr->oblist[i].type;
-			lit_v = edptr->wptr->oblist[i].light;
 
-			if (edptr->wptr->oblist[i].inactive == 0) {
-				j = 0;
-				ob_vert_count = 0;
-				// fixthis
-				poly = edptr->wptr->num_vert_per_object[ob_type] / 3;
+			j = 0;
+			poly = edptr->wptr->num_vert_per_object[ob_type] / 3;
 
-				for (w = 0; w < poly; w++) {
+			for (w = 0; w < poly; w++) {
+				int numv = edptr->wptr->obdata[ob_type].num_vert[w];
 
-					int numv = edptr->wptr->obdata[ob_type].num_vert[w];
+				for (vert_cnt = 0; vert_cnt < numv; vert_cnt++) {
+					lx = edptr->wptr->obdata[ob_type].v[j].x;
+					lz = edptr->wptr->obdata[ob_type].v[j].z;
 
-					for (vert_cnt = 0; vert_cnt < numv; vert_cnt++) {
-						lx = edptr->wptr->obdata[ob_type].v[j].x;
-						lz = edptr->wptr->obdata[ob_type].v[j].z;
+					sx = s * (x_off + wx + (lx * cosine - lz * sine));
+					sz = s * (z_off + wz + (lx * sine + lz * cosine));
 
-						sx = s * (x_off + wx + (lx * cosine - lz * sine));
-						sz = s * (z_off + wz + (lx * sine + lz * cosine));
-
-						if (vert_cnt == 0) {
-							MoveToEx(hdc, (int)sx, 32 + (int)sz, NULL);
-							stx = sx;
-							stz = sz;
-						} else
-							LineTo(hdc, (int)sx, 32 + (int)sz);
-
-						j++;
-						ob_vert_count++;
+					if (vert_cnt == 0) {
+						MoveToEx(offDC, (int)sx, 32 + (int)sz, NULL);
+						stx = sx;
+						stz = sz;
+					} else {
+						LineTo(offDC, (int)sx, 32 + (int)sz);
 					}
-					LineTo(hdc, (int)stx, 32 + (int)stz);
-					poly_cnt++;
+
+					j++;
 				}
-
-			} else {
-				int man = 0;
-				man = 1;
+				LineTo(offDC, (int)stx, 32 + (int)stz);
 			}
-
-			pcount += 15;
 		}
-	}
-	// draw cross at current link
 
+		SelectObject(offDC, holdpen_color);
+		DeleteObject(hpen_color);
+	}
+
+	// Draw selection crosshair
 	if (GetAsyncKeyState(VK_UP) < 0) {
 		cross_x = last_x;
 		cross_z = last_z;
-
-	} else {
-
+	} else if (last_link > 0 && current_link < last_link) {
 		cross_x = LinksList[current_link].last_x;
 		cross_z = LinksList[current_link].last_z;
+	} else {
+		cross_x = 0;
+		cross_z = 0;
 	}
-	hpen_color = CreatePen(PS_SOLID, 5, RGB(255, 0, 0));
-	holdpen_color = SelectObject(hdc, hpen_color);
 
-	MoveToEx(hdc, (int)((cross_x - 58 + x_off) * s), 32 + (int)((cross_z - 58 + z_off) * s), NULL);
-	LineTo(hdc, (int)((cross_x + 58 + x_off) * s), 32 + (int)((cross_z + 58 + z_off) * s));
+	hpen_color = CreatePen(PS_SOLID, 2, RGB(255, 60, 60));
+	holdpen_color = (HPEN)SelectObject(offDC, hpen_color);
 
-	MoveToEx(hdc, (int)((cross_x + 58 + x_off) * s), 32 + (int)((cross_z - 58 + z_off) * s), NULL);
-	LineTo(hdc, (int)((cross_x - 58 + x_off) * s), 32 + (int)((cross_z + 58 + z_off) * s));
+	MoveToEx(offDC, (int)((cross_x - 30.0f + x_off) * s), 32 + (int)((cross_z - 30.0f + z_off) * s), NULL);
+	LineTo(offDC, (int)((cross_x + 30.0f + x_off) * s), 32 + (int)((cross_z + 30.0f + z_off) * s));
 
-	DrawDialogControls(hdc, &ed);
-	DrawScrollBars(hdc, &ed);
+	MoveToEx(offDC, (int)((cross_x + 30.0f + x_off) * s), 32 + (int)((cross_z - 30.0f + z_off) * s), NULL);
+	LineTo(offDC, (int)((cross_x - 30.0f + x_off) * s), 32 + (int)((cross_z + 30.0f + z_off) * s));
 
-	SelectObject(hdc, holdpen_color);
+	SelectObject(offDC, holdpen_color);
 	DeleteObject(hpen_color);
+
+	SelectClipRgn(offDC, NULL);
+	DeleteObject(hrgn);
+
+	DrawDialogControls(offDC, edptr);
+	DrawScrollBars(offDC, edptr);
+
+	BitBlt(hdc, 0, 0, width, height, offDC, 0, 0, SRCCOPY);
+
+	SelectObject(offDC, oldBmp);
+	DeleteObject(offBmp);
+	DeleteDC(offDC);
 }
 
 void DrawCross(HDC hdc, editor_ptr edptr, float cross_x, float cross_z) {
@@ -1453,9 +1461,8 @@ void DrawEditorMapObject(HDC hdc, editor_ptr edptr) {
 	HRGN hrgn;
 	HPEN hpen_color, holdpen_color;
 	int j, w;
-	int x_offset = 20;
 	int vert_cnt, lit_v, ob_vert_count, ob_type;
-	int poly, poly_cnt, pcount;
+	int poly, poly_cnt = 0, pcount = 0;
 	float lx, lz, k = (float)0.017453292;
 	float x_off, z_off, s;
 	float wx, wy, wz;
@@ -1463,10 +1470,9 @@ void DrawEditorMapObject(HDC hdc, editor_ptr edptr) {
 	float stx, stz;
 	float sine, cosine;
 	double ay;
-	int dx, dz;
 	int vv = 0;
 
-	hrgn = CreateRectRgn(0 + 200, 32 + 1, displaysizex - 1, displaysizez - 1);
+	hrgn = CreateRectRgn(200, 32 + 1, displaysizex - 1, displaysizez - 1);
 	SelectClipRgn(hdc, hrgn);
 
 	s = edptr->display_scale;
@@ -1482,15 +1488,9 @@ void DrawEditorMapObject(HDC hdc, editor_ptr edptr) {
 	if (edptr->wptr == NULL)
 		return;
 
-	wx = (float)edptr->MouseX;
+	wx = (float)(floor((double)edptr->MouseX / 20.0) * 20.0);
 	wy = (float)1;
-	wz = (float)edptr->MouseY;
-
-	dx = (int)(wx / (float)20);
-	wx = (float)(dx * (float)20);
-
-	dz = (int)(wz / (float)20);
-	wz = (float)(dz * (float)20);
+	wz = (float)(floor((double)edptr->MouseY / 20.0) * 20.0);
 
 	ay = (double)edptr->object_rot_angle * k;
 	cosine = (float)cos(ay);
@@ -1543,6 +1543,53 @@ void CheckAngle() {
 
 	if (last_angle >= 360)
 		last_angle = last_angle - 360;
+}
+
+void CenterDungeon(editor_ptr edptr) {
+	int i, active_count = 0;
+	float min_x = 1000000.0f, max_x = -1000000.0f;
+	float min_z = 1000000.0f, max_z = -1000000.0f;
+	float center_x, center_z;
+
+	if (edptr == NULL || edptr->wptr == NULL) return;
+
+	for (i = 0; i < edptr->wptr->oblist_length; i++) {
+		if (edptr->wptr->oblist[i].inactive == 0) {
+			float x = edptr->wptr->oblist[i].x;
+			float z = edptr->wptr->oblist[i].z;
+			if (x < min_x) min_x = x;
+			if (x > max_x) max_x = x;
+			if (z < min_z) min_z = z;
+			if (z > max_z) max_z = z;
+			active_count++;
+		}
+	}
+
+	if (active_count == 0) {
+		for (i = 0; i < last_link; i++) {
+			if (LinksList[i].inactive == 0) {
+				float x = LinksList[i].last_x;
+				float z = LinksList[i].last_z;
+				if (x < min_x) min_x = x;
+				if (x > max_x) max_x = x;
+				if (z < min_z) min_z = z;
+				if (z > max_z) max_z = z;
+				active_count++;
+			}
+		}
+	}
+
+	if (active_count == 0) {
+		edptr->display_x_offset = 0;
+		edptr->display_y_offset = 0;
+		return;
+	}
+
+	center_x = (min_x + max_x) * 0.5f;
+	center_z = (min_z + max_z) * 0.5f;
+
+	edptr->display_x_offset = (int)(((float)displaysizex / (2.0f * edptr->display_scale)) - center_x);
+	edptr->display_y_offset = (int)(((float)(displaysizez - 32) / (2.0f * edptr->display_scale)) - center_z);
 }
 
 void DrawRoadSection(HDC hdc, editor_ptr edptr, int instruction) {
