@@ -420,7 +420,6 @@ int UpdateEditorMapWindow(HWND hwnd, HDC hdc, int x, int y, int button_status, e
 			float ypos;
 			int texture;
 			SetLinkWithMouse(MouseX, MouseY);
-			DrawEditorMap(hdc, edptr);
 			//	result = SetDlgItemText(hwnd,IDC_COMBOOBJECT,  "");
 			sprintf(junk, "ID:%d %s", LinksList[current_link].objectid,
 			        edptr->wptr->oblist[LinksList[current_link].objectid].name);
@@ -466,7 +465,8 @@ int UpdateEditorMapWindow(HWND hwnd, HDC hdc, int x, int y, int button_status, e
 			//			SetTimer(hwnd,2,1000,NULL);
 			SetTimer(hwnd, 2, 100, NULL);
 			if (edptr->Redraw_editor_map_flag == 1) {
-				DrawEditorMap(hdc, edptr);
+				// Only the placement preview needs erasing; the map itself is unchanged.
+				RestoreEditorMap(hdc, edptr);
 				edptr->Redraw_editor_map_flag = 0;
 			}
 		}
@@ -1191,86 +1191,246 @@ void DisplayLinksList(HDC hdc) {
 void Draw_2D_Map(HDC hdc, CAMERA cam) {
 }
 
+// Map area in dialog client coordinates.
+#define MAP_AREA_X 200
+#define MAP_AREA_Y 32
+
+// Line batching: GDI calls are expensive, so map edges are queued and drawn
+// with a single PolyPolyline call per batch instead of MoveTo/LineTo per vertex.
+#define MAP_BATCH_POINTS 16384
+#define MAP_BATCH_POLYS 8192
+
+static POINT map_batch_pts[MAP_BATCH_POINTS];
+static DWORD map_batch_cnt[MAP_BATCH_POLYS];
+static int map_batch_npts = 0;
+static int map_batch_npolys = 0;
+
+static void MapBatchFlush(HDC dc) {
+	if (map_batch_npolys > 0)
+		PolyPolyline(dc, map_batch_pts, map_batch_cnt, map_batch_npolys);
+	map_batch_npts = 0;
+	map_batch_npolys = 0;
+}
+
+static void MapBatchBegin(HDC dc, int max_points) {
+	if (map_batch_npts + max_points > MAP_BATCH_POINTS || map_batch_npolys >= MAP_BATCH_POLYS)
+		MapBatchFlush(dc);
+	map_batch_cnt[map_batch_npolys] = 0;
+}
+
+static void MapBatchPoint(int x, int y) {
+	map_batch_pts[map_batch_npts].x = x;
+	map_batch_pts[map_batch_npts].y = y;
+	map_batch_npts++;
+	map_batch_cnt[map_batch_npolys]++;
+}
+
+static void MapBatchEnd(void) {
+	if (map_batch_cnt[map_batch_npolys] > 1)
+		map_batch_npolys++;
+	else
+		map_batch_npts -= map_batch_cnt[map_batch_npolys];
+}
+
+static void MapBatchLine(HDC dc, int x1, int y1, int x2, int y2) {
+	MapBatchBegin(dc, 2);
+	MapBatchPoint(x1, y1);
+	MapBatchPoint(x2, y2);
+	MapBatchEnd();
+}
+
+// Queues the outline of every polygon of an object type, rotated and placed at (wx, wz).
+static void MapBatchObject(HDC dc, world_ptr wptr, int ob_type, float wx, float wz,
+                           float cosine, float sine, float s, float x_off, float z_off) {
+	int w, vert_cnt, j = 0;
+	int poly = wptr->num_polys_per_object[ob_type];
+	objectdata_ptr ob = &wptr->obdata[ob_type];
+
+	if (ob->v == NULL || ob->num_vert == NULL)
+		return;
+
+	for (w = 0; w < poly; w++) {
+		int numv = ob->num_vert[w];
+		int fx = 0, fz = 0;
+
+		if (numv <= 0)
+			continue;
+
+		MapBatchBegin(dc, numv + 1);
+		for (vert_cnt = 0; vert_cnt < numv; vert_cnt++, j++) {
+			float lx = ob->v[j].x;
+			float lz = ob->v[j].z;
+			int px2 = (int)(s * (x_off + wx + (lx * cosine - lz * sine)));
+			int pz2 = MAP_AREA_Y + (int)(s * (z_off + wz + (lx * sine + lz * cosine)));
+
+			if (vert_cnt == 0) {
+				fx = px2;
+				fz = pz2;
+			}
+			MapBatchPoint(px2, pz2);
+		}
+		MapBatchPoint(fx, fz);
+		MapBatchEnd();
+	}
+}
+
+// Largest XZ distance of any vertex from an object type's origin; cached for off-screen culling.
+static float ObjectTypeRadius(world_ptr wptr, int ob_type) {
+	static float radius[MAX_NUM_OBJECT_DATA];
+	static int radius_nv[MAX_NUM_OBJECT_DATA];
+	static VERT *radius_v[MAX_NUM_OBJECT_DATA];
+
+	int nv = wptr->num_vert_per_object[ob_type];
+	VERT *v = wptr->obdata[ob_type].v;
+
+	if (radius_v[ob_type] != v || radius_nv[ob_type] != nv) {
+		float r2 = 0.0f;
+		int n;
+		if (v != NULL) {
+			for (n = 0; n < nv; n++) {
+				float d = v[n].x * v[n].x + v[n].z * v[n].z;
+				if (d > r2)
+					r2 = d;
+			}
+		}
+		radius[ob_type] = (float)sqrt(r2);
+		radius_v[ob_type] = v;
+		radius_nv[ob_type] = nv;
+	}
+	return radius[ob_type];
+}
+
+// Off-screen buffer the map is rendered into before being copied to the window in one BitBlt.
+static HDC map_back_dc = NULL;
+static HBITMAP map_back_bmp = NULL;
+static HGDIOBJ map_back_default_bmp = NULL;
+static int map_back_w = 0;
+static int map_back_h = 0;
+static BOOL map_back_valid = FALSE;
+
+static HDC GetMapBackBuffer(HDC hdc, int w, int h) {
+	if (map_back_dc == NULL) {
+		map_back_dc = CreateCompatibleDC(hdc);
+		if (map_back_dc == NULL)
+			return NULL;
+	}
+
+	if (map_back_bmp == NULL || w != map_back_w || h != map_back_h) {
+		HBITMAP bmp = CreateCompatibleBitmap(hdc, w, h);
+		HGDIOBJ prev;
+		if (bmp == NULL)
+			return NULL;
+		prev = SelectObject(map_back_dc, bmp);
+		if (map_back_bmp == NULL)
+			map_back_default_bmp = prev;
+		else
+			DeleteObject(map_back_bmp);
+		map_back_bmp = bmp;
+		map_back_w = w;
+		map_back_h = h;
+		map_back_valid = FALSE;
+	}
+
+	// Let all drawing use dialog client coordinates.
+	SetViewportOrgEx(map_back_dc, -MAP_AREA_X, -MAP_AREA_Y, NULL);
+	return map_back_dc;
+}
+
+// Clears the area to the right of and below the map (scroll bars / status bar) and redraws them.
+static void DrawMapSurround(HDC hdc, editor_ptr edptr) {
+	RECT r;
+	HBRUSH br = GetSysColorBrush(COLOR_ACTIVEBORDER);
+
+	SetRect(&r, displaysizex, MAP_AREA_Y, wtz, wtzy);
+	FillRect(hdc, &r, br);
+	SetRect(&r, MAP_AREA_X, displaysizez, displaysizex, wtzy);
+	FillRect(hdc, &r, br);
+
+	DrawScrollBars(hdc, edptr);
+	UpdateStatusBar(hdc, 0, 0, edptr);
+}
+
+// Re-displays the last rendered map without re-rendering it (e.g. to erase the object preview).
+void RestoreEditorMap(HDC hdc, editor_ptr edptr) {
+	int w = displaysizex - MAP_AREA_X;
+	int h = displaysizez - MAP_AREA_Y;
+
+	if (map_back_valid && w == map_back_w && h == map_back_h)
+		BitBlt(hdc, MAP_AREA_X, MAP_AREA_Y, w, h, map_back_dc, MAP_AREA_X, MAP_AREA_Y, SRCCOPY);
+	else
+		DrawEditorMap(hdc, edptr);
+}
+
 void DrawEditorMap(HDC hdc, editor_ptr edptr) {
-	HRGN hrgn;
-	HPEN hpen_color, holdpen_color;
-	int i, j, w, z, x;
-	int x_offset = 20;
-	int vert_cnt, lit_v, ob_vert_count, ob_type;
-	int poly, poly_cnt, pcount;
-	float lx, lz, k = (float)0.017453292;
+	HRGN hrgn = NULL;
+	HDC dc;
+	HPEN hpen, hpen_old;
+	HGDIOBJ hbrush_old;
+	int i, z, x;
+	int ob_type;
+	float k = (float)0.017453292;
 	float x_off, z_off, s;
 	float cross_x, cross_z;
-	float wx, wy, wz;
 	float sx, sz;
-	float stx, stz;
-	float sine, cosine;
-	double ay;
 	int start_x, start_z;
 	int end_x, end_z;
-	int nIndex;
+	int map_w = displaysizex - MAP_AREA_X;
+	int map_h = displaysizez - MAP_AREA_Y;
 
-	//	Rectangle(hdc,0,32,displaysizex,displaysizez);
-	//	hrgn=CreateRectRgn(0+1,32+1,displaysizex,displaysizez);
+	if (map_w <= 0 || map_h <= 0)
+		return;
 
-	//	Rectangle(hdc,200,32,wtz,wtzy);
-	//	hrgn=CreateRectRgn(200,32,wtz,wtzy);
-	// Select_Pen_Color(hdc,GRAY);
+	dc = GetMapBackBuffer(hdc, map_w, map_h);
+	if (dc == NULL) {
+		// Fall back to drawing straight to the window, clipped to the map area.
+		dc = hdc;
+		hrgn = CreateRectRgn(MAP_AREA_X, MAP_AREA_Y, displaysizex, displaysizez);
+		SelectClipRgn(dc, hrgn);
+	}
 
-	//	hpen_color = CreatePen(PS_SOLID,1,RGB(0,0,0));
-	//	holdpen_color=SelectObject(hdc,hpen_color);
-
-	nIndex = COLOR_ACTIVEBORDER;
-	holdbrush_color = SelectObject(hdc, GetSysColorBrush(nIndex));
-	Rectangle(hdc, 200, 32, wtz, wtzy);
-	Delete_Brush_Color(hdc);
-
-	hrgn = CreateRectRgn(200, 32, displaysizex, displaysizez);
-
-	//	HDC memDC;
-	// memDC=CreateCompatible(&hdc);
-	// memDC=FillRect(CRect(0,0,wtz,wtzy),memDC);
-
-	//	FillRect(hdc,Rectangle(0,0,wtz,wtzy),hpen_color);
-
-	SelectClipRgn(hdc, hrgn);
+	// Background with a black border on the top/left edge.
+	hpen_old = SelectObject(dc, GetStockObject(BLACK_PEN));
+	hbrush_old = SelectObject(dc, GetSysColorBrush(COLOR_ACTIVEBORDER));
+	Rectangle(dc, MAP_AREA_X, MAP_AREA_Y, displaysizex + 1, displaysizez + 1);
+	SelectObject(dc, hbrush_old);
 
 	s = edptr->display_scale;
 	x_off = (float)edptr->display_x_offset;
 	z_off = (float)edptr->display_y_offset;
 
-	hpen_color = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
-	holdpen_color = SelectObject(hdc, hpen_color);
-
 	start_x = (int)(-x_off) - 260;
 	end_x = (int)(((float)displaysizex / s) - x_off) + 260;
 	start_z = (int)(-z_off) - 260;
-	end_z = (int)(((float)(displaysizez - 32) / s) - z_off) + 260;
+	end_z = (int)(((float)(displaysizez - MAP_AREA_Y) / s) - z_off) + 260;
 
 	start_x = (start_x / 20) * 20;
 	start_z = (start_z / 20) * 20;
 
+	// grid lines
+
+	hpen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
+	SelectObject(dc, hpen);
+
 	if (s * 20 > 2) {
 		for (z = start_z; z < end_z; z += 20) {
 			sz = s * (z_off + (float)z);
-			MoveToEx(hdc, 0, 32 + (int)sz, NULL);
-			LineTo(hdc, displaysizex, 32 + (int)sz);
+			MapBatchLine(dc, 0, MAP_AREA_Y + (int)sz, displaysizex, MAP_AREA_Y + (int)sz);
 		}
 
 		for (x = start_x; x < end_x; x += 20) {
 			sx = s * (x_off + (float)x);
-			MoveToEx(hdc, (int)sx, 32, NULL);
-			LineTo(hdc, (int)sx, displaysizez);
+			MapBatchLine(dc, (int)sx, MAP_AREA_Y, (int)sx, displaysizez);
 		}
 	}
+	MapBatchFlush(dc);
 
-	SelectObject(hdc, holdpen_color);
-	DeleteObject(hpen_color);
+	SelectObject(dc, GetStockObject(BLACK_PEN));
+	DeleteObject(hpen);
 
 	// cell lines
 
-	hpen_color = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
-	holdpen_color = SelectObject(hdc, hpen_color);
+	hpen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
+	SelectObject(dc, hpen);
 
 	{
 		int cell_start_x = (start_x / 260) * 260 - 260;
@@ -1278,101 +1438,86 @@ void DrawEditorMap(HDC hdc, editor_ptr edptr) {
 
 		for (z = cell_start_z; z < end_z; z += 260) {
 			sz = s * (z_off + (float)z);
-			MoveToEx(hdc, 0, 32 + (int)sz, NULL);
-			LineTo(hdc, displaysizex, 32 + (int)sz);
+			MapBatchLine(dc, 0, MAP_AREA_Y + (int)sz, displaysizex, MAP_AREA_Y + (int)sz);
 		}
 
 		for (x = cell_start_x; x < end_x; x += 260) {
 			sx = s * (x_off + (float)x);
-			MoveToEx(hdc, (int)sx, 32, NULL);
-			LineTo(hdc, (int)sx, displaysizez);
+			MapBatchLine(dc, (int)sx, MAP_AREA_Y, (int)sx, displaysizez);
 		}
 	}
+	MapBatchFlush(dc);
 
-	SelectObject(hdc, holdpen_color);
-	DeleteObject(hpen_color);
+	SelectObject(dc, GetStockObject(BLACK_PEN));
+	DeleteObject(hpen);
 
-	if (edptr->wptr == NULL)
-		return;
-	if (edptr->wptr->oblist_length != 0) {
+	// Draw all polys in map //////////////////////////////////////////////
 
-		// Draw all polys in map //////////////////////////////////////////////
+	if (edptr->wptr != NULL) {
+		world_ptr wptr = edptr->wptr;
 
-		for (i = 0; i < edptr->wptr->oblist_length; i++) {
-			wx = edptr->wptr->oblist[i].x;
-			wy = edptr->wptr->oblist[i].y;
-			wz = edptr->wptr->oblist[i].z;
+		for (i = 0; i < wptr->oblist_length; i++) {
+			float wx, wz, r, csx, csz;
+			double ay;
 
-			ay = (double)edptr->wptr->oblist[i].rot_angle * k;
-			cosine = (float)cos(ay);
-			sine = (float)sin(ay);
-			ob_type = edptr->wptr->oblist[i].type;
-			lit_v = edptr->wptr->oblist[i].light;
+			if (wptr->oblist[i].inactive != 0)
+				continue;
 
-			if (edptr->wptr->oblist[i].inactive == 0) {
-				j = 0;
-				ob_vert_count = 0;
-				// fixthis
-				poly = edptr->wptr->num_vert_per_object[ob_type] / 3;
+			ob_type = wptr->oblist[i].type;
+			if (ob_type < 0 || ob_type >= MAX_NUM_OBJECT_DATA || wptr->num_polys_per_object[ob_type] <= 0)
+				continue;
 
-				for (w = 0; w < poly; w++) {
+			wx = wptr->oblist[i].x;
+			wz = wptr->oblist[i].z;
 
-					int numv = edptr->wptr->obdata[ob_type].num_vert[w];
+			// Skip objects that are entirely outside the visible map area.
+			r = s * ObjectTypeRadius(wptr, ob_type) + 2.0f;
+			csx = s * (x_off + wx);
+			csz = (float)MAP_AREA_Y + s * (z_off + wz);
+			if (csx + r < (float)MAP_AREA_X || csx - r > (float)displaysizex ||
+			    csz + r < (float)MAP_AREA_Y || csz - r > (float)displaysizez)
+				continue;
 
-					for (vert_cnt = 0; vert_cnt < numv; vert_cnt++) {
-						lx = edptr->wptr->obdata[ob_type].v[j].x;
-						lz = edptr->wptr->obdata[ob_type].v[j].z;
-
-						sx = s * (x_off + wx + (lx * cosine - lz * sine));
-						sz = s * (z_off + wz + (lx * sine + lz * cosine));
-
-						if (vert_cnt == 0) {
-							MoveToEx(hdc, (int)sx, 32 + (int)sz, NULL);
-							stx = sx;
-							stz = sz;
-						} else
-							LineTo(hdc, (int)sx, 32 + (int)sz);
-
-						j++;
-						ob_vert_count++;
-					}
-					LineTo(hdc, (int)stx, 32 + (int)stz);
-					poly_cnt++;
-				}
-
-			} else {
-				int man = 0;
-				man = 1;
-			}
-
-			pcount += 15;
+			ay = (double)wptr->oblist[i].rot_angle * k;
+			MapBatchObject(dc, wptr, ob_type, wx, wz, (float)cos(ay), (float)sin(ay), s, x_off, z_off);
 		}
+		MapBatchFlush(dc);
+
+		// draw cross at current link
+
+		if (GetAsyncKeyState(VK_UP) < 0) {
+			cross_x = last_x;
+			cross_z = last_z;
+
+		} else {
+
+			cross_x = LinksList[current_link].last_x;
+			cross_z = LinksList[current_link].last_z;
+		}
+		hpen = CreatePen(PS_SOLID, 5, RGB(255, 0, 0));
+		SelectObject(dc, hpen);
+
+		MoveToEx(dc, (int)((cross_x - 58 + x_off) * s), MAP_AREA_Y + (int)((cross_z - 58 + z_off) * s), NULL);
+		LineTo(dc, (int)((cross_x + 58 + x_off) * s), MAP_AREA_Y + (int)((cross_z + 58 + z_off) * s));
+
+		MoveToEx(dc, (int)((cross_x + 58 + x_off) * s), MAP_AREA_Y + (int)((cross_z - 58 + z_off) * s), NULL);
+		LineTo(dc, (int)((cross_x - 58 + x_off) * s), MAP_AREA_Y + (int)((cross_z + 58 + z_off) * s));
+
+		SelectObject(dc, GetStockObject(BLACK_PEN));
+		DeleteObject(hpen);
 	}
-	// draw cross at current link
 
-	if (GetAsyncKeyState(VK_UP) < 0) {
-		cross_x = last_x;
-		cross_z = last_z;
+	SelectObject(dc, hpen_old);
 
+	if (dc != hdc) {
+		BitBlt(hdc, MAP_AREA_X, MAP_AREA_Y, map_w, map_h, dc, MAP_AREA_X, MAP_AREA_Y, SRCCOPY);
+		map_back_valid = TRUE;
 	} else {
-
-		cross_x = LinksList[current_link].last_x;
-		cross_z = LinksList[current_link].last_z;
+		SelectClipRgn(hdc, NULL);
+		DeleteObject(hrgn);
 	}
-	hpen_color = CreatePen(PS_SOLID, 5, RGB(255, 0, 0));
-	holdpen_color = SelectObject(hdc, hpen_color);
 
-	MoveToEx(hdc, (int)((cross_x - 58 + x_off) * s), 32 + (int)((cross_z - 58 + z_off) * s), NULL);
-	LineTo(hdc, (int)((cross_x + 58 + x_off) * s), 32 + (int)((cross_z + 58 + z_off) * s));
-
-	MoveToEx(hdc, (int)((cross_x + 58 + x_off) * s), 32 + (int)((cross_z - 58 + z_off) * s), NULL);
-	LineTo(hdc, (int)((cross_x - 58 + x_off) * s), 32 + (int)((cross_z + 58 + z_off) * s));
-
-	DrawDialogControls(hdc, &ed);
-	DrawScrollBars(hdc, &ed);
-
-	SelectObject(hdc, holdpen_color);
-	DeleteObject(hpen_color);
+	DrawMapSurround(hdc, edptr);
 }
 
 void DrawCross(HDC hdc, editor_ptr edptr, float cross_x, float cross_z) {
@@ -1451,39 +1596,25 @@ void DrawCross(HDC hdc, editor_ptr edptr, float cross_x, float cross_z) {
 
 void DrawEditorMapObject(HDC hdc, editor_ptr edptr) {
 	HRGN hrgn;
-	HPEN hpen_color, holdpen_color;
-	int j, w;
-	int x_offset = 20;
-	int vert_cnt, lit_v, ob_vert_count, ob_type;
-	int poly, poly_cnt, pcount;
-	float lx, lz, k = (float)0.017453292;
+	int ob_type;
+	float k = (float)0.017453292;
 	float x_off, z_off, s;
-	float wx, wy, wz;
-	float sx, sz;
-	float stx, stz;
-	float sine, cosine;
+	float wx, wz;
 	double ay;
 	int dx, dz;
-	int vv = 0;
 
-	hrgn = CreateRectRgn(0 + 200, 32 + 1, displaysizex - 1, displaysizez - 1);
-	SelectClipRgn(hdc, hrgn);
+	if (edptr->wptr == NULL)
+		return;
+
+	ob_type = edptr->current_object_id; // OBJECT_ID_HOUSE;
+	if (ob_type < 0 || ob_type >= MAX_NUM_OBJECT_DATA)
+		return;
 
 	s = edptr->display_scale;
 	x_off = (float)edptr->display_x_offset;
 	z_off = (float)edptr->display_y_offset;
 
-	hpen_color = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
-	holdpen_color = SelectObject(hdc, hpen_color);
-
-	SelectObject(hdc, holdpen_color);
-	DeleteObject(hpen_color);
-
-	if (edptr->wptr == NULL)
-		return;
-
 	wx = (float)edptr->MouseX;
-	wy = (float)1;
 	wz = (float)edptr->MouseY;
 
 	dx = (int)(wx / (float)20);
@@ -1493,43 +1624,15 @@ void DrawEditorMapObject(HDC hdc, editor_ptr edptr) {
 	wz = (float)(dz * (float)20);
 
 	ay = (double)edptr->object_rot_angle * k;
-	cosine = (float)cos(ay);
-	sine = (float)sin(ay);
-	ob_type = edptr->current_object_id; // OBJECT_ID_HOUSE;
 
-	lit_v = edptr->wptr->oblist[ob_type].light;
+	hrgn = CreateRectRgn(0 + 200, 32 + 1, displaysizex - 1, displaysizez - 1);
+	SelectClipRgn(hdc, hrgn);
 
-	j = 0;
-	ob_vert_count = 0;
+	MapBatchObject(hdc, edptr->wptr, ob_type, wx, wz, (float)cos(ay), (float)sin(ay), s, x_off, z_off);
+	MapBatchFlush(hdc);
 
-	// fixthis
-	poly = edptr->wptr->num_vert_per_object[ob_type] / 3;
-	//	poly=edptr->wptr->num_vert_per_object[ob_type];
-
-	for (w = 0; w < poly; w++) {
-		int numv = edptr->wptr->obdata[ob_type].num_vert[w];
-		for (vert_cnt = 0; vert_cnt < numv; vert_cnt++) {
-			lx = edptr->wptr->obdata[ob_type].v[j].x;
-			lz = edptr->wptr->obdata[ob_type].v[j].z;
-
-			sx = s * (x_off + wx + (lx * cosine - lz * sine));
-			sz = s * (z_off + wz + (lx * sine + lz * cosine));
-
-			if (vert_cnt == 0) {
-				MoveToEx(hdc, (int)sx, 32 + (int)sz, NULL);
-				stx = sx;
-				stz = sz;
-			} else
-				LineTo(hdc, (int)sx, 32 + (int)sz);
-
-			j++;
-			ob_vert_count++;
-		}
-		LineTo(hdc, (int)stx, 32 + (int)stz);
-		poly_cnt++;
-		vv = 0;
-	}
-	pcount += 15;
+	SelectClipRgn(hdc, NULL);
+	DeleteObject(hrgn);
 }
 
 void ReloadMainMap() {

@@ -1,6 +1,8 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <winuser.h>
 #include "world.h"
 #include "d3dmain.h"
@@ -8,13 +10,14 @@
 // #include  <mapiwin.h>
 #include <math.h>
 #define MAX_NUM_OBJECTS_PER_CELL 650
+#define MAX_NUM_CELLS_PER_OBJECT 256
 SETUPINFO setupinfo;
 
 HDC hdc;
 HWND hwndObjects;
 int cell_length[9000];
-int cell_xlist[9000][90];
-int cell_zlist[9000][90];
+int cell_xlist[9000][MAX_NUM_CELLS_PER_OBJECT];
+int cell_zlist[9000][MAX_NUM_CELLS_PER_OBJECT];
 int cell_list_debug[9000];
 
 struct TEXNAMES {
@@ -56,6 +59,44 @@ void debug_me(char *s, float a, float b, float c);
 void SavePreCompiledHeader(HWND hwnd, world_ptr wptr);
 BOOL LoadRRTextures(HWND hwnd, char *filename);
 BOOL LoadModels(HWND hwnd, char *filename);
+
+// Grows an object's vertex/polygon arrays so they can hold at least the requested counts.
+static BOOL EnsureObjectCapacity(objectdata_ptr ob, int need_vert, int need_poly) {
+	if (need_vert > ob->max_vert) {
+		int new_max = ob->max_vert > 0 ? ob->max_vert : 1024;
+		while (new_max < need_vert)
+			new_max *= 2;
+
+		VERT *nv = (VERT *)realloc(ob->v, new_max * sizeof(VERT));
+		if (nv == NULL)
+			return FALSE;
+		memset(nv + ob->max_vert, 0, (new_max - ob->max_vert) * sizeof(VERT));
+		ob->v = nv;
+		ob->max_vert = new_max;
+	}
+
+	if (need_poly > ob->max_poly) {
+		int new_max = ob->max_poly > 0 ? ob->max_poly : 512;
+		while (new_max < need_poly)
+			new_max *= 2;
+
+		int *nt = (int *)realloc(ob->tex, new_max * sizeof(int));
+		if (nt == NULL)
+			return FALSE;
+		memset(nt + ob->max_poly, 0, (new_max - ob->max_poly) * sizeof(int));
+		ob->tex = nt;
+
+		int *nn = (int *)realloc(ob->num_vert, new_max * sizeof(int));
+		if (nn == NULL)
+			return FALSE;
+		memset(nn + ob->max_poly, 0, (new_max - ob->max_poly) * sizeof(int));
+		ob->num_vert = nn;
+
+		ob->max_poly = new_max;
+	}
+
+	return TRUE;
+}
 
 int LoadObjectData(HWND hwnd, char *filename, world_ptr wptr) {
 	FILE *fp;
@@ -130,6 +171,19 @@ int LoadObjectData(HWND hwnd, char *filename, world_ptr wptr) {
 
 			if (object_count = -1)
 				object_count = atoi(p);
+
+			if (object_count < 0 || object_count >= MAX_NUM_OBJECT_DATA) {
+				MessageBox(hwnd, "Error object ID out of range in: LoadObjectData", NULL, MB_OK);
+				fclose(fp);
+				return 1;
+			}
+		}
+
+		if ((strcmp(s, "QUAD") == 0 || strcmp(s, "QUADTEX") == 0 || strcmp(s, "TRI") == 0 || strcmp(s, "TRITEX") == 0) &&
+		    !EnsureObjectCapacity(&wptr->obdata[object_count], vert_count + 4, poly_count + 1)) {
+			MessageBox(hwnd, "Error out of memory in: LoadObjectData", NULL, MB_OK);
+			fclose(fp);
+			return 1;
 		}
 
 		if (strcmp(s, "TEXTURE") == 0) {
@@ -841,7 +895,7 @@ void InitWorldMap(HWND hwnd, world_ptr wptr) {
 		j2 = 0;
 		cell_count = 0;
 		cell_length[i] = cell_count;
-		poly = wptr->num_polys_per_object[ob_type];
+		poly = (ob_type >= 0 && ob_type < MAX_NUM_OBJECT_DATA) ? wptr->num_polys_per_object[ob_type] : 0;
 		//		poly=12;
 		hit2 = 0;
 		hit = 0;
@@ -945,7 +999,7 @@ void InitWorldMap(HWND hwnd, world_ptr wptr) {
 				cell_z = (int)(tz / (float)256);
 
 				if (map[cell_x][cell_z] == FALSE) {
-					if (cell_count < MAX_NUM_OBJECTS_PER_CELL) {
+					if (cell_count < MAX_NUM_CELLS_PER_OBJECT) {
 						fprintf(fp, "%d", i);                         // object
 						fprintf(fp, "%s%d", "        ", w);           // poly
 						fprintf(fp, "%s%d", "      ", vert_cnt);      // vert

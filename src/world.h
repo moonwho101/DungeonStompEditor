@@ -100,11 +100,17 @@ typedef struct objectlist_typ {
 	char ctext[1048];
 } OBJECTLIST, *objectlist_ptr;
 
+#define MAX_NUM_OBJECT_DATA 500
+
+// Vertex and polygon arrays grow on demand while loading, so objects are not
+// limited to a fixed triangle count.
 typedef struct objectdata_typ {
-	VERT v[5000];
+	VERT *v;
 	VERT connection[4];
-	int tex[1000];
-	int num_vert[5000];
+	int *tex;
+	int *num_vert;
+	int max_vert;
+	int max_poly;
 
 } OBJECTDATA, *objectdata_ptr;
 
@@ -112,7 +118,7 @@ typedef struct world_typ {
 	OBJECTLIST oblist[10000];
 	int oblist_length;
 
-	OBJECTDATA obdata[500];
+	OBJECTDATA obdata[MAX_NUM_OBJECT_DATA];
 	int num_vert_per_object[900];
 	int num_polys_per_object[900];
 	int obdata_length;

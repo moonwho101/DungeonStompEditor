@@ -54,6 +54,7 @@ void ChangeCurrentLink(int direction);
 
 void Draw_2D_Map(HDC hdc, CAMERA cam);
 void DrawEditorMap(HDC hdc, editor_ptr edptr);
+void RestoreEditorMap(HDC hdc, editor_ptr edptr);
 void DrawEditorMapObject(HDC hdc, editor_ptr edptr);
 void ReloadMainMap();
 void DrawRoadSection(HDC hdc, editor_ptr edptr, int instruction);

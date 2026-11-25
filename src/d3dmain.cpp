@@ -540,21 +540,20 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		// ed.display_scale = 0.25;
 		break;
 
-	case WM_PAINT:
-		DrawEditorMap(hdc, &ed);
+	case WM_PAINT: {
+		// Validate (and erase) first so the default handler doesn't wipe the map afterwards.
+		PAINTSTRUCT ps;
+		BeginPaint(hwnd, &ps);
+		EndPaint(hwnd, &ps);
 
+		DrawEditorMap(hdc, &ed);
 		DrawDialogControls(hdc, &ed);
-		DrawScrollBars(hdc, &ed);
-		UpdateStatusBar(hdc, 0, 0, &ed);
 		UpdateDialogBar(hdc, xPos, yPos, LEFT_BUTTON_DOWN, &ed);
-		//			DrawDialogControls(hdc, &ed);
 		break;
+	}
 	case WM_SIZE:
 		DrawEditorMap(hdc, &ed);
-
 		DrawDialogControls(hdc, &ed);
-		DrawScrollBars(hdc, &ed);
-		UpdateStatusBar(hdc, 0, 0, &ed);
 		break;
 
 	case WM_MOUSEMOVE:
@@ -753,7 +752,6 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 		//			DrawEditorMap(hdc, &ed);
 		//			DrawDialogControls(hdc, &ed);
 
-		DrawScrollBars(hdc, &ed);
 		UpdateStatusBar(hdc, 0, 0, &ed);
 		DrawDialogControls(hdc, &ed);
 		break;
@@ -1248,7 +1246,6 @@ BOOL FAR PASCAL MapEditor(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			ed.Redraw_editor_map_flag = 1;
 			// UpdateEditorMapWindow(hwnd, hdc, xPos, yPos, MOUSE_MOVE, &ed);
 			DrawDialogControls(hdc, &ed);
-			DrawScrollBars(hdc, &ed);
 
 			//				MessageBeep(0);
 		}
