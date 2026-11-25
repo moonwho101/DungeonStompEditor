@@ -102,6 +102,9 @@ typedef struct objectlist_typ {
 
 #define MAX_NUM_OBJECT_DATA 500
 
+// Maximum number of objects placed in a map (also sizes the link list and per-object tables).
+#define MAX_NUM_OBJECTS 30000
+
 // Vertex and polygon arrays grow on demand while loading, so objects are not
 // limited to a fixed triangle count.
 typedef struct objectdata_typ {
@@ -115,7 +118,7 @@ typedef struct objectdata_typ {
 } OBJECTDATA, *objectdata_ptr;
 
 typedef struct world_typ {
-	OBJECTLIST oblist[10000];
+	OBJECTLIST oblist[MAX_NUM_OBJECTS + 1];
 	int oblist_length;
 
 	OBJECTDATA obdata[MAX_NUM_OBJECT_DATA];

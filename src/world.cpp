@@ -15,10 +15,12 @@ SETUPINFO setupinfo;
 
 HDC hdc;
 HWND hwndObjects;
-int cell_length[9000];
-int cell_xlist[9000][MAX_NUM_CELLS_PER_OBJECT];
-int cell_zlist[9000][MAX_NUM_CELLS_PER_OBJECT];
-int cell_list_debug[9000];
+#define MAP_NUM_CELLS 200
+// Indexed up to oblist_length inclusive by the cell loops, hence the +1.
+int cell_length[MAX_NUM_OBJECTS + 1];
+short cell_xlist[MAX_NUM_OBJECTS + 1][MAX_NUM_CELLS_PER_OBJECT];
+short cell_zlist[MAX_NUM_OBJECTS + 1][MAX_NUM_CELLS_PER_OBJECT];
+int cell_list_debug[MAX_NUM_OBJECTS_PER_CELL];
 
 struct TEXNAMES {
 	char texname[100][1];
@@ -48,7 +50,7 @@ int objectnumber[1000];
 int objectnumbercount;
 
 extern "C" int last_link;
-extern "C" int montexid[2000];
+extern "C" int montexid[MAX_NUM_OBJECTS + 1];
 extern "C" int LoadMapTextures(char *filename);
 
 int PrintMsgX = 10;
@@ -449,6 +451,12 @@ int LoadWorld(HWND hwnd, char *filename, world_ptr wptr) {
 			}
 			if (start_flag == FALSE)
 				object_count++;
+			if (object_count >= MAX_NUM_OBJECTS) {
+				MessageBox(hwnd, "Too many objects in map in: LoadWorld", NULL, MB_OK);
+				wptr->oblist_length = MAX_NUM_OBJECTS;
+				fclose(fp);
+				return 1;
+			}
 			wptr->oblist[object_count].type = object_id;
 			strcpy(wptr->oblist[object_count].name, p);
 			strcpy(edworld.oblist[object_count].name, p);
@@ -789,7 +797,7 @@ void InitWorldMap(HWND hwnd, world_ptr wptr) {
 	int lit_v;
 	int cell_count;
 	int cell_x, cell_z;
-	int temp[520];
+	int temp[MAX_NUM_OBJECTS_PER_CELL];
 	int mem_count = 0;
 	int num_vert;
 	int j2 = 0;
@@ -998,6 +1006,10 @@ void InitWorldMap(HWND hwnd, world_ptr wptr) {
 				cell_x = (int)(tx / (float)256);
 				cell_z = (int)(tz / (float)256);
 
+				// Vertices outside the 200x200 cell grid can't be stored in a cell.
+				if (cell_x < 0 || cell_x >= MAP_NUM_CELLS || cell_z < 0 || cell_z >= MAP_NUM_CELLS)
+					continue;
+
 				if (map[cell_x][cell_z] == FALSE) {
 					if (cell_count < MAX_NUM_CELLS_PER_OBJECT) {
 						fprintf(fp, "%d", i);                         // object
@@ -1139,7 +1151,7 @@ void SavePreCompiledHeader(HWND hwnd, world_ptr wptr) {
 	int cx = 0, cz = 0;
 	int count = 0, i = 0, j = 0;
 	int length = 0;
-	int temp[520];
+	int temp[MAX_NUM_OBJECTS_PER_CELL];
 	int mem_count = 0, w = 0;
 
 	fp2 = fopen("level1.cmp", "w");

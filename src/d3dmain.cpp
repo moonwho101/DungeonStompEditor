@@ -102,7 +102,7 @@ typedef struct Link_typ {
 } LINK;
 // #define MAX_NUM_LINKS 1000
 
-#define MAX_NUM_LINKS 21000
+#define MAX_NUM_LINKS MAX_NUM_OBJECTS
 
 // GLOBAL VARIABLES
 extern "C" LINK LinksList[MAX_NUM_LINKS];

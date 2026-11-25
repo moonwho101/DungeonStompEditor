@@ -14,7 +14,7 @@
 #define ROAD_TEX 1
 #define CURB_TEX 2
 #define PAVE_TEX 3
-#define MAX_NUM_LINKS 21000
+#define MAX_NUM_LINKS MAX_NUM_OBJECTS
 #define MAX_NUM_OBJECT_TYPES 550
 
 int current_poly = 0;
@@ -22,7 +22,7 @@ float last_angle = (float)0;
 float last_x;
 float last_z;
 WORLD edworld;
-int montexid[2000];
+int montexid[MAX_NUM_OBJECTS + 1];
 
 int LoadMapTextures(char *filename);
 
@@ -871,6 +871,11 @@ void PlaceObjectWithMouse(editor_ptr edptr, int x, int z) {
 	int result;
 	i = edptr->wptr->oblist_length;
 
+	if (i >= MAX_NUM_OBJECTS || last_link >= MAX_NUM_LINKS) {
+		MessageBox(gwin, "Object limit reached (max 30000)", NULL, MB_OK);
+		return;
+	}
+
 	dx = x / 20;
 	x = dx * 20;
 
@@ -1649,6 +1654,9 @@ void CheckAngle() {
 }
 
 void DrawRoadSection(HDC hdc, editor_ptr edptr, int instruction) {
+	if (edptr->wptr->oblist_length >= MAX_NUM_OBJECTS || last_link >= MAX_NUM_LINKS - 1)
+		return;
+
 	switch (instruction) {
 	case LEFT_HAND_CURVE:
 		AddLeftCurve(hdc, edptr);
@@ -2233,6 +2241,12 @@ int LoadMapInEditor(HWND hwnd, char *filename, world_ptr wptr) {
 
 			if (start_flag == FALSE)
 				object_count++;
+			if (object_count >= MAX_NUM_OBJECTS) {
+				MessageBox(hwnd, "Too many objects in map (max 30000) in: LoadMapInEditor", NULL, MB_OK);
+				wptr->oblist_length = MAX_NUM_OBJECTS;
+				fclose(fp);
+				return 1;
+			}
 			wptr->oblist[object_count].type = object_id;
 			strcpy(wptr->oblist[object_count].name, p);
 			strcpy(edworld.oblist[object_count].name, p);
@@ -2410,6 +2424,11 @@ int LoadMapInEditor(HWND hwnd, char *filename, world_ptr wptr) {
 		}
 
 		if (strcmp(s, "LINK") == 0) {
+			if (last_link >= MAX_NUM_LINKS) {
+				fscanf(fp, "%s %s %s %s", &p, &p, &p, &p);
+				continue;
+			}
+
 			fscanf(fp, "%s", &p);
 			LinksList[last_link].last_x = (float)atoi(p);
 
@@ -2478,6 +2497,8 @@ int LoadMapTextures(char *filename) {
 
 			if (start_flag == FALSE)
 				object_count++;
+			if (object_count >= MAX_NUM_OBJECTS)
+				break;
 
 			start_flag = FALSE;
 		}
